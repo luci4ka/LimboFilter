@@ -149,17 +149,33 @@ public class LimboFilterCommand implements SimpleCommand {
 
   private Component createStatsComponent(InetAddress address, long ping) {
     Statistics statistics = this.plugin.getStatistics();
-    return LimboFilter.getSerializer().deserialize(
-        MessageFormat.format(
-            Settings.IMP.MAIN.STRINGS.STATS_FORMAT,
-            statistics.getBlockedConnections(),
-            statistics.getConnections() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_CPS,
-            statistics.getPings() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_PPS,
-            statistics.getTotalConnection(),
-            ping,
-            statistics.getPing(address)
-        )
+    Component base = LimboFilter.getSerializer().deserialize(
+            MessageFormat.format(
+                    Settings.IMP.MAIN.STRINGS.STATS_FORMAT,
+                    statistics.getBlockedConnections(),
+                    statistics.getConnections() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_CPS,
+                    statistics.getPings() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_PPS,
+                    statistics.getTotalConnection(),
+                    ping,
+                    statistics.getPing(address)
+            )
     );
+
+    String extra = String.format(
+            " &7| &cFalling: &6%d &cHover: &6%d &cRate: &6%d &cAccel: &6%d &cGround: &6%d &cSettings: &6%d &cBrand: &6%d &cCaptcha: &6%d &cProxy: &6%d",
+            statistics.getFallingCheckFails(),
+            statistics.getHoverCheckFails(),
+            statistics.getPacketRateFails(),
+            statistics.getAccelerationFails(),
+            statistics.getOnGroundLieFails(),
+            statistics.getClientSettingsFails(),
+            statistics.getBrandFails(),
+            statistics.getCaptchaFails(),
+            statistics.getProxyCheckFails()
+    );
+
+    Component extraComponent = LimboFilter.getSerializer().deserialize(extra);
+    return Component.textOfChildren(base, extraComponent);
   }
 
   private enum Subcommand {

@@ -17,6 +17,8 @@
 
 package net.elytrium.limbofilter;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.event.Subscribe;
@@ -37,9 +39,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import net.elytrium.commons.kyori.serialization.Serializer;
 import net.elytrium.commons.kyori.serialization.Serializers;
@@ -64,6 +64,7 @@ import net.elytrium.limbofilter.listener.TcpListener;
 import net.elytrium.limbofilter.protocol.packets.Interact;
 import net.elytrium.limbofilter.protocol.packets.SetEntityMetadata;
 import net.elytrium.limbofilter.protocol.packets.SpawnEntity;
+import net.elytrium.limbofilter.queue.ConnectionQueue;
 import net.elytrium.limbofilter.stats.Statistics;
 import net.elytrium.pcap.PcapException;
 import net.kyori.adventure.text.Component;
@@ -78,16 +79,16 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.slf4j.Logger;
 
 @Plugin(
-    id = "limbofilter",
-    name = "LimboFilter",
-    version = BuildConstants.FILTER_VERSION,
-    url = "https://elytrium.net/",
-    authors = {
-        "Elytrium (https://elytrium.net/)",
-    },
-    dependencies = {
-        @Dependency(id = "limboapi")
-    }
+        id = "limbofilter",
+        name = "LimboFilter",
+        version = BuildConstants.FILTER_VERSION,
+        url = "https://elytrium.net/",
+        authors = {
+                "Elytrium (https://elytrium.net/)",
+        },
+        dependencies = {
+                @Dependency(id = "limboapi")
+        }
 )
 public class LimboFilter {
 
@@ -96,21 +97,26 @@ public class LimboFilter {
   @MonotonicNonNull
   private static Serializer SERIALIZER;
 
-  private final Map<String, CachedUser> cachedFilterChecks = new ConcurrentHashMap<>();
+  private static final int CACHE_MAX_SIZE = 10_000;
 
+  // ---- Кеш проверенных игроков ----
+  private Cache<String, CachedUser> cachedFilterChecks;
+
+  // ---- Инфраструктура ----
   private final Path dataDirectory;
   private final File configFile;
-  private final Metrics.Factory metricsFactory;
   private final ProxyServer server;
+  private final ConnectionQueue connectionQueue = new ConnectionQueue();
   private final Statistics statistics;
   private final LimboFactory limboFactory;
   private final PacketFactory packetFactory;
   private final Level initialLogLevel;
+  private final Metrics.Factory metricsFactory;
 
+  // ---- Состояние ----
   private Limbo filterServer;
   private VirtualWorld filterWorld;
   private ScheduledTask refreshCaptchaTask;
-  private ScheduledTask purgeCacheTask;
   private ScheduledTask logEnablerTask;
   private CaptchaGenerator generator;
   private CachedPackets packets;
@@ -122,8 +128,8 @@ public class LimboFilter {
     setLogger(logger);
 
     this.server = server;
-    this.metricsFactory = metricsFactory;
     this.dataDirectory = dataDirectory;
+    this.metricsFactory = metricsFactory;
     this.configFile = this.dataDirectory.resolve("config.yml").toFile();
     this.statistics = new Statistics();
 
@@ -132,21 +138,25 @@ public class LimboFilter {
     this.initialLogLevel = LogManager.getRootLogger().getLevel();
   }
 
+  // =====================================================================
+  //  Жизненный цикл
+  // =====================================================================
+
   @Subscribe
   public void onProxyInitialization(ProxyInitializeEvent event) {
     Settings.IMP.setLogger(LOGGER);
 
     this.reload();
 
-    Metrics metrics = this.metricsFactory.make(this, 13699);
+    Metrics metrics = this.metricsFactory.make(this, 13700);
     Settings.MAIN main = Settings.IMP.MAIN;
     metrics.addCustomChart(new SimplePie("filter_type", () -> String.valueOf(main.CHECK_STATE)));
     metrics.addCustomChart(new SimplePie("load_world", () -> String.valueOf(main.LOAD_WORLD)));
     metrics.addCustomChart(new SimplePie("check_brand", () -> String.valueOf(main.CHECK_CLIENT_BRAND)));
     metrics.addCustomChart(new SimplePie("check_settings", () -> String.valueOf(main.CHECK_CLIENT_SETTINGS)));
     metrics.addCustomChart(
-        new SimplePie("has_backplate",
-            () -> String.valueOf(!main.CAPTCHA_GENERATOR.BACKPLATE_PATHS.isEmpty() && !main.CAPTCHA_GENERATOR.BACKPLATE_PATHS.get(0).isEmpty()))
+            new SimplePie("has_backplate",
+                    () -> String.valueOf(!main.CAPTCHA_GENERATOR.BACKPLATE_PATHS.isEmpty() && !main.CAPTCHA_GENERATOR.BACKPLATE_PATHS.get(0).isEmpty()))
     );
     metrics.addCustomChart(new SingleLineChart("pings", () -> Math.toIntExact(this.statistics.getPings()))); // Total pings
     metrics.addCustomChart(new SingleLineChart("connections", () -> Math.toIntExact(this.statistics.getConnections())));
@@ -166,6 +176,25 @@ public class LimboFilter {
   public void reload() {
     Settings.IMP.reload(this.configFile, Settings.IMP.PREFIX);
 
+    this.reloadSerializer();
+    this.connectionQueue.reload();
+    this.logRamConsumption();
+    this.reloadCaptchaGenerator();
+    this.reloadFilterCache();
+    this.reloadFilterWorld();
+    this.reloadFilterServer();
+    this.reloadPackets();
+    this.reloadCommands();
+    this.reloadListeners();
+    this.reloadTcpListener();
+    this.reloadLogEnablerTask();
+  }
+
+  // =====================================================================
+  //  Перезагрузка частей
+  // =====================================================================
+
+  private void reloadSerializer() {
     ComponentSerializer<Component, Component, String> serializer = Settings.IMP.SERIALIZER.getSerializer();
     if (serializer == null) {
       LOGGER.warn("The specified serializer could not be founded, using default. (LEGACY_AMPERSAND)");
@@ -173,7 +202,9 @@ public class LimboFilter {
     } else {
       setSerializer(new Serializer(serializer));
     }
+  }
 
+  private void logRamConsumption() {
     long captchaGeneratorRamConsumed = (long) MapData.MAP_SIZE * Settings.IMP.MAIN.CAPTCHA_GENERATOR.IMAGES_COUNT;
 
     if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
@@ -189,7 +220,7 @@ public class LimboFilter {
     double captchaGeneratorRamGigabytesConsumed = captchaGeneratorRamConsumed / 1024.0 / 1024.0 / 1024.0;
 
     String ramWarning = String.format("Current captcha generator settings will consume %.2fGB RAM normally and %.2fGB RAM on reloads",
-        captchaGeneratorRamGigabytesConsumed, captchaGeneratorRamGigabytesConsumed * 2);
+            captchaGeneratorRamGigabytesConsumed, captchaGeneratorRamGigabytesConsumed * 2);
 
     if (captchaGeneratorRamConsumed > Runtime.getRuntime().maxMemory() * 2 / 3) {
       LOGGER.warn(ramWarning);
@@ -198,8 +229,10 @@ public class LimboFilter {
       LOGGER.info(ramWarning);
       LOGGER.info("Modify the config to decrease RAM consumption");
     }
+  }
 
-    BotFilterSessionHandler.setFallingCheckTotalTime(Settings.IMP.MAIN.FALLING_CHECK_TICKS * 50L); // One tick == 50 millis
+  private void reloadCaptchaGenerator() {
+    BotFilterSessionHandler.setFallingCheckTotalTime(Settings.IMP.MAIN.FALLING_CHECK_TICKS * 50L);
 
     this.statistics.restartUpdateTasks(this, this.server.getScheduler());
 
@@ -215,11 +248,16 @@ public class LimboFilter {
     this.generator.initializeGenerator();
 
     this.refreshCaptchaTask = this.server.getScheduler()
-        .buildTask(this, this.generator::generateImages)
-        .repeat(Settings.IMP.MAIN.CAPTCHA_REGENERATE_RATE, TimeUnit.SECONDS)
-        .schedule();
+            .buildTask(this, this.generator::generateImages)
+            .repeat(Settings.IMP.MAIN.CAPTCHA_REGENERATE_RATE, TimeUnit.SECONDS)
+            .schedule();
+  }
 
-    this.cachedFilterChecks.clear();
+  private void reloadFilterCache() {
+    this.cachedFilterChecks = Caffeine.newBuilder()
+            .maximumSize(CACHE_MAX_SIZE)
+            .expireAfterWrite(Settings.IMP.MAIN.PURGE_CACHE_MILLIS, TimeUnit.MILLISECONDS)
+            .build();
 
     Settings.IMP.MAIN.WHITELISTED_PLAYERS.forEach(player -> {
       try {
@@ -228,15 +266,16 @@ public class LimboFilter {
         throw new IllegalArgumentException(e);
       }
     });
+  }
 
+  private void reloadFilterWorld() {
     Settings.MAIN.COORDS captchaCoords = Settings.IMP.MAIN.COORDS;
     this.filterWorld = this.limboFactory.createVirtualWorld(
-        Settings.IMP.MAIN.BOTFILTER_DIMENSION,
-        captchaCoords.CAPTCHA_X, captchaCoords.CAPTCHA_Y, captchaCoords.CAPTCHA_Z,
-        (float) captchaCoords.CAPTCHA_YAW, (float) captchaCoords.CAPTCHA_PITCH
+            Settings.IMP.MAIN.BOTFILTER_DIMENSION,
+            captchaCoords.CAPTCHA_X, captchaCoords.CAPTCHA_Y, captchaCoords.CAPTCHA_Z,
+            (float) captchaCoords.CAPTCHA_YAW, (float) captchaCoords.CAPTCHA_PITCH
     );
 
-    // Make LimboAPI preload parent to captcha chunks to ensure that Sodium can properly render captcha.
     if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
       Settings.MAIN.FRAMED_CAPTCHA settings = Settings.IMP.MAIN.FRAMED_CAPTCHA;
       for (int x = 0; x < settings.WIDTH; x++) {
@@ -246,8 +285,8 @@ public class LimboFilter {
       for (int x = -1; x <= 1; x++) {
         for (int z = -1; z <= 1; z++) {
           this.filterWorld.getChunkOrNew(
-              (int) captchaCoords.CAPTCHA_X + (x * 16),
-              (int) captchaCoords.CAPTCHA_Z + (z * 16)
+                  (int) captchaCoords.CAPTCHA_X + (x * 16),
+                  (int) captchaCoords.CAPTCHA_Z + (z * 16)
           );
         }
       }
@@ -268,64 +307,68 @@ public class LimboFilter {
     if (Settings.IMP.MAIN.WORLD_OVERRIDE_BLOCK_LIGHT_LEVEL) {
       this.filterWorld.fillBlockLight(Settings.IMP.MAIN.WORLD_LIGHT_LEVEL);
     }
+  }
 
+  private void reloadFilterServer() {
     if (this.filterServer != null) {
       this.filterServer.dispose();
     }
 
     this.filterServer = this.limboFactory.createLimbo(this.filterWorld)
-        .setName("LimboFilter")
-        .setReadTimeout(Settings.IMP.MAIN.MAX_PING)
-        .setWorldTime(Settings.IMP.MAIN.WORLD_TICKS)
-        .setGameMode(Settings.IMP.MAIN.GAME_MODE)
-        .setShouldRespawn(false)
-        .setShouldUpdateTags(false)
-        .registerPacket(PacketDirection.SERVERBOUND, Interact.class, Interact::new, new PacketMapping[]{
-            new PacketMapping(0x02, ProtocolVersion.MINIMUM_VERSION, false),
-            new PacketMapping(0x0A, ProtocolVersion.MINECRAFT_1_9, false),
-            new PacketMapping(0x0B, ProtocolVersion.MINECRAFT_1_12, false),
-            new PacketMapping(0x0A, ProtocolVersion.MINECRAFT_1_12_1, false),
-            new PacketMapping(0x0D, ProtocolVersion.MINECRAFT_1_13, false),
-            new PacketMapping(0x0E, ProtocolVersion.MINECRAFT_1_14, false),
-            new PacketMapping(0x0D, ProtocolVersion.MINECRAFT_1_17, false),
-            new PacketMapping(0x0F, ProtocolVersion.MINECRAFT_1_19, false),
-            new PacketMapping(0x10, ProtocolVersion.MINECRAFT_1_19_1, false),
-            new PacketMapping(0x0F, ProtocolVersion.MINECRAFT_1_19_3, false),
-            new PacketMapping(0x10, ProtocolVersion.MINECRAFT_1_19_4, false),
-            new PacketMapping(0x12, ProtocolVersion.MINECRAFT_1_20_2, false),
-            new PacketMapping(0x13, ProtocolVersion.MINECRAFT_1_20_3, false),
-            new PacketMapping(0x16, ProtocolVersion.MINECRAFT_1_20_5, false),
-            new PacketMapping(0x18, ProtocolVersion.MINECRAFT_1_21_2, false),
-            new PacketMapping(0x19, ProtocolVersion.MINECRAFT_1_21_6, false),
-            new PacketMapping(0x1A, ProtocolVersion.MINECRAFT_26_1, false),
-        })
-        .registerPacket(PacketDirection.CLIENTBOUND, SetEntityMetadata.class, null, new PacketMapping[]{
-            new PacketMapping(0x1C, ProtocolVersion.MINIMUM_VERSION, true),
-            new PacketMapping(0x39, ProtocolVersion.MINECRAFT_1_9, true),
-            new PacketMapping(0x3B, ProtocolVersion.MINECRAFT_1_12, true),
-            new PacketMapping(0x3C, ProtocolVersion.MINECRAFT_1_12_1, true),
-            new PacketMapping(0x3F, ProtocolVersion.MINECRAFT_1_13, true),
-            new PacketMapping(0x43, ProtocolVersion.MINECRAFT_1_14, true),
-            new PacketMapping(0x44, ProtocolVersion.MINECRAFT_1_15, true),
-            new PacketMapping(0x4D, ProtocolVersion.MINECRAFT_1_17, true),
-            new PacketMapping(0x50, ProtocolVersion.MINECRAFT_1_19_1, true),
-            new PacketMapping(0x4E, ProtocolVersion.MINECRAFT_1_19_3, true),
-            new PacketMapping(0x52, ProtocolVersion.MINECRAFT_1_19_4, true),
-            new PacketMapping(0x54, ProtocolVersion.MINECRAFT_1_20_2, true),
-            new PacketMapping(0x56, ProtocolVersion.MINECRAFT_1_20_3, true),
-            new PacketMapping(0x58, ProtocolVersion.MINECRAFT_1_20_5, true),
-            new PacketMapping(0x5D, ProtocolVersion.MINECRAFT_1_21_2, true),
-            new PacketMapping(0x5C, ProtocolVersion.MINECRAFT_1_21_5, true),
-            new PacketMapping(0x61, ProtocolVersion.MINECRAFT_1_21_9, true),
-            new PacketMapping(0x63, ProtocolVersion.MINECRAFT_26_1, true),
-            new PacketMapping(0x65, ProtocolVersion.MINECRAFT_26_3, true),
-        })
-        .registerPacket(PacketDirection.CLIENTBOUND, SpawnEntity.class, null, new PacketMapping[]{
-            new PacketMapping(0x0E, ProtocolVersion.MINIMUM_VERSION, true),
-            new PacketMapping(0x00, ProtocolVersion.MINECRAFT_1_9, true),
-            new PacketMapping(0x01, ProtocolVersion.MINECRAFT_1_19_4, true),
-        });
+            .setName("LimboFilter")
+            .setReadTimeout(Settings.IMP.MAIN.MAX_PING)
+            .setWorldTime(Settings.IMP.MAIN.WORLD_TICKS)
+            .setGameMode(Settings.IMP.MAIN.GAME_MODE)
+            .setShouldRespawn(false)
+            .setShouldUpdateTags(false)
+            .registerPacket(PacketDirection.SERVERBOUND, Interact.class, Interact::new, new PacketMapping[]{
+                    new PacketMapping(0x02, ProtocolVersion.MINIMUM_VERSION, false),
+                    new PacketMapping(0x0A, ProtocolVersion.MINECRAFT_1_9, false),
+                    new PacketMapping(0x0B, ProtocolVersion.MINECRAFT_1_12, false),
+                    new PacketMapping(0x0A, ProtocolVersion.MINECRAFT_1_12_1, false),
+                    new PacketMapping(0x0D, ProtocolVersion.MINECRAFT_1_13, false),
+                    new PacketMapping(0x0E, ProtocolVersion.MINECRAFT_1_14, false),
+                    new PacketMapping(0x0D, ProtocolVersion.MINECRAFT_1_17, false),
+                    new PacketMapping(0x0F, ProtocolVersion.MINECRAFT_1_19, false),
+                    new PacketMapping(0x10, ProtocolVersion.MINECRAFT_1_19_1, false),
+                    new PacketMapping(0x0F, ProtocolVersion.MINECRAFT_1_19_3, false),
+                    new PacketMapping(0x10, ProtocolVersion.MINECRAFT_1_19_4, false),
+                    new PacketMapping(0x12, ProtocolVersion.MINECRAFT_1_20_2, false),
+                    new PacketMapping(0x13, ProtocolVersion.MINECRAFT_1_20_3, false),
+                    new PacketMapping(0x16, ProtocolVersion.MINECRAFT_1_20_5, false),
+                    new PacketMapping(0x18, ProtocolVersion.MINECRAFT_1_21_2, false),
+                    new PacketMapping(0x19, ProtocolVersion.MINECRAFT_1_21_6, false),
+                    new PacketMapping(0x1A, ProtocolVersion.MINECRAFT_26_1, false),
+            })
+            .registerPacket(PacketDirection.CLIENTBOUND, SetEntityMetadata.class, null, new PacketMapping[]{
+                    new PacketMapping(0x1C, ProtocolVersion.MINIMUM_VERSION, true),
+                    new PacketMapping(0x39, ProtocolVersion.MINECRAFT_1_9, true),
+                    new PacketMapping(0x3B, ProtocolVersion.MINECRAFT_1_12, true),
+                    new PacketMapping(0x3C, ProtocolVersion.MINECRAFT_1_12_1, true),
+                    new PacketMapping(0x3F, ProtocolVersion.MINECRAFT_1_13, true),
+                    new PacketMapping(0x43, ProtocolVersion.MINECRAFT_1_14, true),
+                    new PacketMapping(0x44, ProtocolVersion.MINECRAFT_1_15, true),
+                    new PacketMapping(0x4D, ProtocolVersion.MINECRAFT_1_17, true),
+                    new PacketMapping(0x50, ProtocolVersion.MINECRAFT_1_19_1, true),
+                    new PacketMapping(0x4E, ProtocolVersion.MINECRAFT_1_19_3, true),
+                    new PacketMapping(0x52, ProtocolVersion.MINECRAFT_1_19_4, true),
+                    new PacketMapping(0x54, ProtocolVersion.MINECRAFT_1_20_2, true),
+                    new PacketMapping(0x56, ProtocolVersion.MINECRAFT_1_20_3, true),
+                    new PacketMapping(0x58, ProtocolVersion.MINECRAFT_1_20_5, true),
+                    new PacketMapping(0x5D, ProtocolVersion.MINECRAFT_1_21_2, true),
+                    new PacketMapping(0x5C, ProtocolVersion.MINECRAFT_1_21_5, true),
+                    new PacketMapping(0x61, ProtocolVersion.MINECRAFT_1_21_9, true),
+                    new PacketMapping(0x63, ProtocolVersion.MINECRAFT_26_1, true),
+                    new PacketMapping(0x65, ProtocolVersion.MINECRAFT_26_3, true),
+            })
+            .registerPacket(PacketDirection.CLIENTBOUND, SpawnEntity.class, null, new PacketMapping[]{
+                    new PacketMapping(0x0E, ProtocolVersion.MINIMUM_VERSION, true),
+                    new PacketMapping(0x00, ProtocolVersion.MINECRAFT_1_9, true),
+                    new PacketMapping(0x01, ProtocolVersion.MINECRAFT_1_19_4, true),
+            });
+  }
 
+  private void reloadPackets() {
     CachedPackets cachedPackets = new CachedPackets();
     cachedPackets.createPackets(this.limboFactory, this.packetFactory);
 
@@ -335,17 +378,23 @@ public class LimboFilter {
     if (previousCachedPackets != null) {
       previousCachedPackets.dispose();
     }
+  }
 
+  private void reloadCommands() {
     CommandManager manager = this.server.getCommandManager();
     manager.unregister("limbofilter");
     manager.unregister("sendfilter");
 
     manager.register("limbofilter", new LimboFilterCommand(this), "lf", "botfilter", "bf", "lfilter");
     manager.register("sendfilter", new SendFilterCommand(this));
+  }
 
+  private void reloadListeners() {
     this.server.getEventManager().unregisterListeners(this);
     this.server.getEventManager().register(this, new FilterListener(this));
+  }
 
+  private void reloadTcpListener() {
     if (this.tcpListener != null) {
       this.tcpListener.stop();
       this.tcpListener = null;
@@ -360,39 +409,34 @@ public class LimboFilter {
         new Exception("Got exception when starting TCP listener. Disable it if you are unsure what does it does.", e).printStackTrace();
       }
     }
+  }
 
-    if (this.purgeCacheTask != null) {
-      this.purgeCacheTask.cancel();
-    }
-
-    this.purgeCacheTask = this.server.getScheduler()
-        .buildTask(this, () -> this.checkCache(this.cachedFilterChecks))
-        .delay(Settings.IMP.MAIN.PURGE_CACHE_MILLIS, TimeUnit.MILLISECONDS)
-        .repeat(Settings.IMP.MAIN.PURGE_CACHE_MILLIS, TimeUnit.MILLISECONDS)
-        .schedule();
-
+  private void reloadLogEnablerTask() {
     if (this.logEnablerTask != null) {
       this.logEnablerTask.cancel();
     }
 
     this.logEnablerTask = this.server.getScheduler()
-        .buildTask(this, this::checkLoggerToEnable)
-        .delay(Settings.IMP.MAIN.LOG_ENABLER_CHECK_REFRESH_RATE, TimeUnit.MILLISECONDS)
-        .repeat(Settings.IMP.MAIN.LOG_ENABLER_CHECK_REFRESH_RATE, TimeUnit.MILLISECONDS)
-        .schedule();
+            .buildTask(this, this::checkLoggerToEnable)
+            .delay(Settings.IMP.MAIN.LOG_ENABLER_CHECK_REFRESH_RATE, TimeUnit.MILLISECONDS)
+            .repeat(Settings.IMP.MAIN.LOG_ENABLER_CHECK_REFRESH_RATE, TimeUnit.MILLISECONDS)
+            .schedule();
   }
+
+  // =====================================================================
+  //  Кеш проверенных игроков
+  // =====================================================================
 
   public void cacheFilterUser(Player player) {
     String username = player.getUsername();
-    this.cachedFilterChecks.remove(username);
     this.cachedFilterChecks.put(
-        username,
-        new CachedUser(player.getRemoteAddress().getAddress(), System.currentTimeMillis() + Settings.IMP.MAIN.PURGE_CACHE_MILLIS)
+            username,
+            new CachedUser(player.getRemoteAddress().getAddress(), System.currentTimeMillis() + Settings.IMP.MAIN.PURGE_CACHE_MILLIS)
     );
   }
 
   public void resetCacheForFilterUser(Player player) {
-    this.cachedFilterChecks.remove(player.getUsername());
+    this.cachedFilterChecks.invalidate(player.getUsername());
   }
 
   public boolean shouldCheck(Player player) {
@@ -412,12 +456,17 @@ public class LimboFilter {
   }
 
   public boolean shouldCheck(String nickname, InetAddress ip) {
-    if (this.cachedFilterChecks.containsKey(nickname)) {
-      return !ip.equals(this.cachedFilterChecks.get(nickname).getInetAddress());
+    CachedUser user = this.cachedFilterChecks.getIfPresent(nickname);
+    if (user != null) {
+      return !ip.equals(user.getInetAddress());
     } else {
       return true;
     }
   }
+
+  // =====================================================================
+  //  Отправка в лимбо
+  // =====================================================================
 
   public void sendToFilterServer(Player player) {
     try {
@@ -432,12 +481,9 @@ public class LimboFilter {
     }
   }
 
-  private void checkCache(Map<String, CachedUser> userMap) {
-    userMap.entrySet().stream()
-        .filter(user -> user.getValue().getCheckTime() <= System.currentTimeMillis())
-        .map(Map.Entry::getKey)
-        .forEach(userMap::remove);
-  }
+  // =====================================================================
+  //  Управление логами при атаке
+  // =====================================================================
 
   private void checkLoggerToEnable() {
     if (this.logsDisabled && !this.checkLoggerCps()) {
@@ -457,12 +503,16 @@ public class LimboFilter {
 
   private boolean checkLoggerCps() {
     return this.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.DISABLE_LOG)
-        || this.checkPpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.DISABLE_LOG);
+            || this.checkPpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.DISABLE_LOG);
   }
 
   private void setLoggerLevel(Level level) {
     Configurator.setRootLevel(level);
   }
+
+  // =====================================================================
+  //  Лимиты CPS/PPS
+  // =====================================================================
 
   public boolean checkCpsLimit(int limit) {
     if (limit != -1) {
@@ -479,6 +529,10 @@ public class LimboFilter {
       return false;
     }
   }
+
+  // =====================================================================
+  //  Геттеры
+  // =====================================================================
 
   public File getFile(String filename) {
     File dataDirectoryFile = this.dataDirectory.resolve(filename).toFile();
@@ -526,21 +580,29 @@ public class LimboFilter {
     return this.filterWorld;
   }
 
-  private static void setLogger(Logger logger) {
-    LOGGER = logger;
+  public ConnectionQueue getConnectionQueue() {
+    return this.connectionQueue;
   }
 
   public static Logger getLogger() {
     return LOGGER;
   }
 
+  public static Serializer getSerializer() {
+    return SERIALIZER;
+  }
+
+  private static void setLogger(Logger logger) {
+    LOGGER = logger;
+  }
+
   private static void setSerializer(Serializer serializer) {
     SERIALIZER = serializer;
   }
 
-  public static Serializer getSerializer() {
-    return SERIALIZER;
-  }
+  // =====================================================================
+  //  Вложенные классы
+  // =====================================================================
 
   private static class CachedUser {
 

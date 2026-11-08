@@ -62,8 +62,22 @@ public class Settings extends YamlConfig {
     public long PURGE_CACHE_MILLIS = 3600000;
     @Comment("Max attempts, which a player has to solve the captcha.")
     public int CAPTCHA_ATTEMPTS = 2;
-    @Comment("Duration of Falling Check in Minecraft ticks (1 tick = 0.05 second, 20 ticks = 1 second).")
-    public int FALLING_CHECK_TICKS = 128;
+
+    @Comment("Max ticks a player can stay in air without falling before being kicked (Hover check).")
+    public int MAX_HOVER_TICKS = 10;
+
+    @Comment("Minimum allowed interval between movement packets in ms. Lower = stricter.")
+    public int MIN_MOVE_INTERVAL_MS = 15;
+
+    @Comment("Max consecutive fast movement packets before kick.")
+    public int MAX_FAST_MOVES = 10;
+    @Comment("Min allowed client view distance. Lower = stricter. Normal clients: 2-32.")
+    public int MIN_CLIENT_VIEW_DISTANCE = 2;
+
+    @Comment("Max allowed client view distance. Lower = stricter. Normal clients: 2-32.")
+    public int MAX_CLIENT_VIEW_DISTANCE = 32;
+    @Comment("Duration of Falling Check in Minecraft ticks. Higher = more time for bot to fail.")
+    public int FALLING_CHECK_TICKS = 200;
     @Comment("Maximum time to check the player in milliseconds. If the player stays on the filter limbo for longer than this time, then the check will fail.")
     public int TIME_OUT = 15000;
     @Comment("Same, but for Geyser users.")
@@ -73,7 +87,12 @@ public class Settings extends YamlConfig {
     @Comment("Change the parameters below only if you know what they mean.")
     public int NON_VALID_POSITION_XZ_ATTEMPTS = 10;
     public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
-    public double MAX_VALID_POSITION_DIFFERENCE = 0.01;
+    @Comment("Maximum allowed difference between actual and vanilla falling speed. Lower = stricter.")
+    public double MAX_VALID_POSITION_DIFFERENCE = 0.001;
+    @Comment("Max players simultaneously in filter limbo. Prevents RAM exhaustion during bot attacks.")
+    public int MAX_CONCURRENT_CHECKS = 50;
+    @Comment("How long a player waits in queue before being kicked (millis).")
+    public long QUEUE_TIMEOUT_MILLIS = 10000;
     @Comment("Parameter for developers and contributors.")
     public boolean FALLING_CHECK_DEBUG = false;
     @Comment("Should captcha be displayed in the left hand. May cause problems with entering captcha for users with 4:3 monitors. Version: 1.9+")
@@ -453,6 +472,7 @@ public class Settings extends YamlConfig {
       public String SEND_FAILED = "{PRFX} There is no registered servers or connected players named {0}.";
 
       public String CAPTCHA_NOT_READY_YET = "{PRFX} The captcha is not ready yet. Try again in a few seconds.";
+      public String QUEUE_OVERFLOW_KICK = "{PRFX}{NL}&cServer is under attack. Please try again in a few seconds.";
     }
   }
 }

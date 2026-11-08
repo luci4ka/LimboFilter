@@ -116,15 +116,41 @@ public class Statistics {
     return this.getPings() + this.getConnections();
   }
 
-  public long getFallingCheckFails() { return this.fallingCheckFails.longValue(); }
-  public long getHoverCheckFails() { return this.hoverCheckFails.longValue(); }
-  public long getPacketRateFails() { return this.packetRateFails.longValue(); }
-  public long getAccelerationFails() { return this.accelerationFails.longValue(); }
-  public long getOnGroundLieFails() { return this.onGroundLieFails.longValue(); }
-  public long getClientSettingsFails() { return this.clientSettingsFails.longValue(); }
-  public long getBrandFails() { return this.brandFails.longValue(); }
-  public long getCaptchaFails() { return this.captchaFails.longValue(); }
-  public long getProxyCheckFails() { return this.proxyCheckFails.longValue(); }
+  public long getFallingCheckFails() {
+    return this.fallingCheckFails.longValue();
+  }
+
+  public long getHoverCheckFails() {
+    return this.hoverCheckFails.longValue();
+  }
+
+  public long getPacketRateFails() {
+    return this.packetRateFails.longValue();
+  }
+
+  public long getAccelerationFails() {
+    return this.accelerationFails.longValue();
+  }
+
+  public long getOnGroundLieFails() {
+    return this.onGroundLieFails.longValue();
+  }
+
+  public long getClientSettingsFails() {
+    return this.clientSettingsFails.longValue();
+  }
+
+  public long getBrandFails() {
+    return this.brandFails.longValue();
+  }
+
+  public long getCaptchaFails() {
+    return this.captchaFails.longValue();
+  }
+
+  public long getProxyCheckFails() {
+    return this.proxyCheckFails.longValue();
+  }
 
   public void restartUpdateTasks(LimboFilter plugin, Scheduler scheduler) {
     synchronized (this.scheduledTaskList) {
@@ -139,23 +165,33 @@ public class Statistics {
   private void startUpdatingCps(LimboFilter plugin, Scheduler scheduler) {
     long delayInterpolate = Settings.IMP.MAIN.UNIT_OF_TIME_CPS * 1000L;
 
-    this.scheduledTaskList.add(scheduler
-            .buildTask(plugin, () -> this.interpolatedCpsBefore.set(Statistics.this.connections.longValue() / Settings.IMP.MAIN.UNIT_OF_TIME_CPS / 2L))
+    this.scheduledTaskList.add(
+        scheduler
+            .buildTask(
+                plugin,
+                () ->
+                    this.interpolatedCpsBefore.set(
+                        Statistics.this.connections.longValue()
+                            / Settings.IMP.MAIN.UNIT_OF_TIME_CPS
+                            / 2L))
             .delay(delayInterpolate, TimeUnit.MILLISECONDS)
             .repeat(delayInterpolate, TimeUnit.MILLISECONDS)
             .schedule());
 
     long delay = delayInterpolate / Settings.IMP.MAIN.UNIT_OF_TIME_CPS / 2L;
 
-    this.scheduledTaskList.add(scheduler
-            .buildTask(plugin, () -> {
-              long current = Statistics.this.connections.longValue();
-              long before = Statistics.this.interpolatedCpsBefore.get();
+    this.scheduledTaskList.add(
+        scheduler
+            .buildTask(
+                plugin,
+                () -> {
+                  long current = Statistics.this.connections.longValue();
+                  long before = Statistics.this.interpolatedCpsBefore.get();
 
-              if (current >= before) {
-                Statistics.this.connections.add(-before);
-              }
-            })
+                  if (current >= before) {
+                    Statistics.this.connections.add(-before);
+                  }
+                })
             .delay(delay, TimeUnit.MILLISECONDS)
             .repeat(delay, TimeUnit.MILLISECONDS)
             .schedule());
@@ -164,30 +200,41 @@ public class Statistics {
   private void startUpdatingPps(LimboFilter plugin, Scheduler scheduler) {
     long delayInterpolate = Settings.IMP.MAIN.UNIT_OF_TIME_PPS * 1000L;
 
-    this.scheduledTaskList.add(scheduler
-            .buildTask(plugin, () -> this.interpolatedPpsBefore.set(Statistics.this.pings.longValue() / Settings.IMP.MAIN.UNIT_OF_TIME_PPS / 2L))
+    this.scheduledTaskList.add(
+        scheduler
+            .buildTask(
+                plugin,
+                () ->
+                    this.interpolatedPpsBefore.set(
+                        Statistics.this.pings.longValue()
+                            / Settings.IMP.MAIN.UNIT_OF_TIME_PPS
+                            / 2L))
             .delay(delayInterpolate, TimeUnit.MILLISECONDS)
             .repeat(delayInterpolate, TimeUnit.MILLISECONDS)
             .schedule());
 
     long delay = delayInterpolate / Settings.IMP.MAIN.UNIT_OF_TIME_PPS / 2L;
 
-    this.scheduledTaskList.add(scheduler
-            .buildTask(plugin, () -> {
-              long current = Statistics.this.pings.longValue();
-              long before = Statistics.this.interpolatedPpsBefore.get();
+    this.scheduledTaskList.add(
+        scheduler
+            .buildTask(
+                plugin,
+                () -> {
+                  long current = Statistics.this.pings.longValue();
+                  long before = Statistics.this.interpolatedPpsBefore.get();
 
-              if (current >= before) {
-                Statistics.this.pings.add(-before);
-              }
-            })
+                  if (current >= before) {
+                    Statistics.this.pings.add(-before);
+                  }
+                })
             .delay(delay, TimeUnit.MILLISECONDS)
             .repeat(delay, TimeUnit.MILLISECONDS)
             .schedule());
   }
 
   public void updatePing(InetAddress address, int currentPing) {
-    this.pingMap.merge(address, currentPing, (previousPing, newPing) -> (previousPing * 3 + newPing) / 4);
+    this.pingMap.merge(
+        address, currentPing, (previousPing, newPing) -> (previousPing * 3 + newPing) / 4);
   }
 
   public int getPing(InetAddress address) {

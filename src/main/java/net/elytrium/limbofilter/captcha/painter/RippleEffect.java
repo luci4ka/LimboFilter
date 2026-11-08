@@ -18,8 +18,8 @@
 package net.elytrium.limbofilter.captcha.painter;
 
 /**
- * A filter to generate ripple (wave) effected images. Uses a transformed sinus
- * wave for this. This class is thread safe.
+ * A filter to generate ripple (wave) effected images. Uses a transformed sinus wave for this. This
+ * class is thread safe.
  *
  * @author akiraly
  */
@@ -29,8 +29,9 @@ public class RippleEffect implements CaptchaEffect {
   private final int[] horizontalDelta;
 
   /**
-   * @param vertical   config to calculate waving deltas from x axis (so to modify y values), not null
-   * @param horizontal config to calculate waving deltas from y axis (so to modify xvalues), not null
+   * @param vertical config to calculate waving deltas from x axis (so to modify y values), not null
+   * @param horizontal config to calculate waving deltas from y axis (so to modify xvalues), not
+   *     null
    */
   public RippleEffect(AxisConfig vertical, AxisConfig horizontal, int width, int height) {
     this.verticalDelta = this.calcDeltaArray(vertical, width);
@@ -40,7 +41,7 @@ public class RippleEffect implements CaptchaEffect {
   /**
    * Draws a rippled (waved) variant of source into destination.
    *
-   * @param src  to be transformed, not null
+   * @param src to be transformed, not null
    * @param dest to hold the result, not null
    */
   public void filter(int width, int height, byte[] src, byte[] dest) {
@@ -57,7 +58,7 @@ public class RippleEffect implements CaptchaEffect {
    * Calculates wave delta array.
    *
    * @param axisConfig config object to transform the wave, not null
-   * @param num        number of points needed, positive
+   * @param num number of points needed, positive
    * @return the calculated num length delta array
    */
   protected int[] calcDeltaArray(AxisConfig axisConfig, int num) {
@@ -79,9 +80,7 @@ public class RippleEffect implements CaptchaEffect {
     return true;
   }
 
-  /**
-   * Class to represent wave transforming information for an axis.
-   */
+  /** Class to represent wave transforming information for an axis. */
   public static class AxisConfig {
 
     private final double start;
@@ -91,13 +90,12 @@ public class RippleEffect implements CaptchaEffect {
     /**
      * Constructor.
      *
-     * @param start     the starting x offset to generate wave values. Should be
-     *                  between 0 and 2 * {@link Math#PI}.
-     * @param length    the length of x to be used to generate wave values. Should
-     *                  be between 0 and 4 * {@link Math#PI}.
-     * @param amplitude the maximum y value, if it is too big, some important
-     *                  parts of the image (like the text) can "wave" out on the
-     *                  top or on the bottom of the image.
+     * @param start the starting x offset to generate wave values. Should be between 0 and 2 *
+     *     {@link Math#PI}.
+     * @param length the length of x to be used to generate wave values. Should be between 0 and 4 *
+     *     {@link Math#PI}.
+     * @param amplitude the maximum y value, if it is too big, some important parts of the image
+     *     (like the text) can "wave" out on the top or on the bottom of the image.
      */
     public AxisConfig(double start, double length, double amplitude) {
       this.start = this.normalize(start, 2);
@@ -108,7 +106,7 @@ public class RippleEffect implements CaptchaEffect {
     /**
      * Normalizes parameter to fall into [0, multi * {@link Math#PI}].
      *
-     * @param a     to be normalized
+     * @param a to be normalized
      * @param multi multiplicator used for end value
      * @return normalized value
      */

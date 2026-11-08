@@ -6,6 +6,7 @@ plugins {
     id("com.github.spotbugs").version("6.4.8")
     id("net.minecraftforge.licenser").version("1.2.0")
     id("com.gradleup.shadow").version("9.3.0")
+    id("com.diffplug.spotless").version("6.25.0")
 }
 
 setGroup("net.elytrium")
@@ -105,4 +106,13 @@ String getCurrentShortRevision() {
     return System.getProperty("os.name").toLowerCase().contains("win")
         ? ["cmd", "/c", "git rev-parse --short HEAD"].execute().text.trim()
         : ["bash", "-c", "git rev-parse --short HEAD"].execute().text.trim()
+}
+
+spotless {
+    java {
+        googleJavaFormat('1.35.0')
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }

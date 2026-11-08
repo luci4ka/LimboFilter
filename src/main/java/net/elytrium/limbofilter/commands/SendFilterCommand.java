@@ -58,16 +58,24 @@ public class SendFilterCommand implements SimpleCommand {
         Collection<Player> players = registeredServer.get().getPlayersConnected();
         players.forEach(this.plugin::resetCacheForFilterUser);
         players.forEach(this.plugin::sendToFilterServer);
-        source.sendMessage(serializer.deserialize(MessageFormat.format(Settings.IMP.MAIN.STRINGS.SEND_SERVER_SUCCESSFUL, players.size(), target)));
+        source.sendMessage(
+            serializer.deserialize(
+                MessageFormat.format(
+                    Settings.IMP.MAIN.STRINGS.SEND_SERVER_SUCCESSFUL, players.size(), target)));
       } else {
         Optional<Player> optionalPlayer = server.getPlayer(target);
         if (optionalPlayer.isPresent()) {
           Player player = optionalPlayer.get();
           this.plugin.resetCacheForFilterUser(player);
           this.plugin.sendToFilterServer(player);
-          source.sendMessage(serializer.deserialize(MessageFormat.format(Settings.IMP.MAIN.STRINGS.SEND_PLAYER_SUCCESSFUL, player.getUsername())));
+          source.sendMessage(
+              serializer.deserialize(
+                  MessageFormat.format(
+                      Settings.IMP.MAIN.STRINGS.SEND_PLAYER_SUCCESSFUL, player.getUsername())));
         } else {
-          source.sendMessage(serializer.deserialize(MessageFormat.format(Settings.IMP.MAIN.STRINGS.SEND_FAILED, target)));
+          source.sendMessage(
+              serializer.deserialize(
+                  MessageFormat.format(Settings.IMP.MAIN.STRINGS.SEND_FAILED, target)));
         }
       }
     }
@@ -75,7 +83,7 @@ public class SendFilterCommand implements SimpleCommand {
 
   @Override
   public boolean hasPermission(SimpleCommand.Invocation invocation) {
-    return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.SEND_FILTER
-        .hasPermission(invocation.source(), "limbofilter.admin.sendfilter");
+    return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.SEND_FILTER.hasPermission(
+        invocation.source(), "limbofilter.admin.sendfilter");
   }
 }

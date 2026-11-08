@@ -36,14 +36,24 @@ public class RenderedFont {
 
   private final Int2ObjectMap<Glyph> charToGlyph = new Int2ObjectOpenHashMap<>();
 
-  public RenderedFont(Font font, FontRenderContext ctx, char[] alphabet, int width, int height, boolean outlineEnabled,
-                      float outlineMultiplier, int outlineOffsetX, int outlineOffsetY, double zoom) {
+  public RenderedFont(
+      Font font,
+      FontRenderContext ctx,
+      char[] alphabet,
+      int width,
+      int height,
+      boolean outlineEnabled,
+      float outlineMultiplier,
+      int outlineOffsetX,
+      int outlineOffsetY,
+      double zoom) {
     ThreadLocalRandom random = ThreadLocalRandom.current();
     for (char c : alphabet) {
       GlyphVector vector = font.createGlyphVector(ctx, String.valueOf(c));
 
       if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_ROTATE) {
-        vector.setGlyphTransform(0, AffineTransform.getRotateInstance((random.nextDouble() - 0.5) * Math.PI / 8));
+        vector.setGlyphTransform(
+            0, AffineTransform.getRotateInstance((random.nextDouble() - 0.5) * Math.PI / 8));
       }
 
       Point2D pos = vector.getGlyphPosition(0);
@@ -58,14 +68,22 @@ public class RenderedFont {
 
       if (outlineEnabled) {
         Stroke stroke = new BasicStroke(outlineMultiplier);
-        this.drawShape(stroke.createStrokedShape(shape), glyphArray, width, height, outlineOffsetX, outlineOffsetY, zoom);
+        this.drawShape(
+            stroke.createStrokedShape(shape),
+            glyphArray,
+            width,
+            height,
+            outlineOffsetX,
+            outlineOffsetY,
+            zoom);
       }
 
       this.charToGlyph.put(c, new Glyph(glyphArray, width, height));
     }
   }
 
-  private void drawShape(Shape shape, BitSet array, int width, int height, int offsetX, int offsetY, double zoom) {
+  private void drawShape(
+      Shape shape, BitSet array, int width, int height, int offsetX, int offsetY, double zoom) {
     Rectangle2D box = shape.getBounds2D();
     double multiplierX = box.getX() / width * zoom;
     double multiplierY = box.getY() / height * zoom;

@@ -47,7 +47,8 @@ public class FilterListener {
     this.plugin.getStatistics().addConnection();
 
     if (this.plugin.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.ONLINE_MODE_VERIFY)
-            && this.plugin.shouldCheck(event.getUsername(), event.getConnection().getRemoteAddress().getAddress())) {
+        && this.plugin.shouldCheck(
+            event.getUsername(), event.getConnection().getRemoteAddress().getAddress())) {
       event.setResult(PreLoginEvent.PreLoginComponentResult.forceOfflineMode());
     }
   }
@@ -78,9 +79,8 @@ public class FilterListener {
     // Пытаемся занять слот в очереди ПЕРЕД тем, как отправить в лимбо.
     // Если очередь переполнена — кикаем сразу, не тратя RAM на лимбо.
     if (!this.plugin.getConnectionQueue().acquire()) {
-      player.disconnect(LimboFilter.getSerializer().deserialize(
-              Settings.IMP.MAIN.STRINGS.QUEUE_OVERFLOW_KICK
-      ));
+      player.disconnect(
+          LimboFilter.getSerializer().deserialize(Settings.IMP.MAIN.STRINGS.QUEUE_OVERFLOW_KICK));
       return;
     }
 

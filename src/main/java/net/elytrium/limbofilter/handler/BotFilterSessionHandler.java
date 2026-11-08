@@ -96,11 +96,15 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     this.clientSettingsCheck = new ClientSettingsCheck();
 
     if (proxyPlayer.getRemoteAddress().getPort() == 0) {
-      this.state = plugin.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.CHECK_STATE_TOGGLE)
-              ? Settings.IMP.MAIN.GEYSER_CHECK_STATE : Settings.IMP.MAIN.GEYSER_CHECK_STATE_NON_TOGGLED;
+      this.state =
+          plugin.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.CHECK_STATE_TOGGLE)
+              ? Settings.IMP.MAIN.GEYSER_CHECK_STATE
+              : Settings.IMP.MAIN.GEYSER_CHECK_STATE_NON_TOGGLED;
     } else {
-      this.state = plugin.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.CHECK_STATE_TOGGLE)
-              ? Settings.IMP.MAIN.CHECK_STATE : Settings.IMP.MAIN.CHECK_STATE_NON_TOGGLED;
+      this.state =
+          plugin.checkCpsLimit(Settings.IMP.MAIN.FILTER_AUTO_TOGGLE.CHECK_STATE_TOGGLE)
+              ? Settings.IMP.MAIN.CHECK_STATE
+              : Settings.IMP.MAIN.CHECK_STATE_NON_TOGGLED;
     }
   }
 
@@ -116,7 +120,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     this.joinTime = System.currentTimeMillis();
     if (this.state == CheckState.ONLY_CAPTCHA) {
       this.changeStateToCaptcha();
-    } else if (this.state == CheckState.ONLY_POSITION || this.state == CheckState.CAPTCHA_ON_POSITION_FAILED) {
+    } else if (this.state == CheckState.ONLY_POSITION
+        || this.state == CheckState.CAPTCHA_ON_POSITION_FAILED) {
       this.sendFallingCheckPackets();
       this.sendFallingCheckTitleAndChat();
     } else if (this.state == CheckState.CAPTCHA_POSITION) {
@@ -129,8 +134,13 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
 
     this.player.flushPackets();
 
-    this.filterMainTask = player.getScheduledExecutor().schedule(() ->
-            this.disconnect(this.plugin.getPackets().getTimesUp(), true), this.getTimeout(), TimeUnit.MILLISECONDS);
+    this.filterMainTask =
+        player
+            .getScheduledExecutor()
+            .schedule(
+                () -> this.disconnect(this.plugin.getPackets().getTimesUp(), true),
+                this.getTimeout(),
+                TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -164,7 +174,10 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     }
 
     if (this.version.compareTo(ProtocolVersion.MINECRAFT_1_8) <= 0
-            && x == this.validX && y == this.validY && z == this.validZ && this.waitingTeleportId == this.validTeleportId) {
+        && x == this.validX
+        && y == this.validY
+        && z == this.validZ
+        && this.waitingTeleportId == this.validTeleportId) {
       this.fallingCheck.resetTicks();
       this.waitingTeleportId = -1;
     }
@@ -181,13 +194,17 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
         this.fallingCheckFailed(result.getReason());
         return;
       }
-      if (this.fallingCheck.isStarted() && this.state == CheckState.CAPTCHA_POSITION
-              && !Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
+      if (this.fallingCheck.isStarted()
+          && this.state == CheckState.CAPTCHA_POSITION
+          && !Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
         this.sendCaptcha();
       }
     }
 
-    if (this.fallingCheck.isStarted() && this.state != CheckState.SUCCESSFUL && this.state != CheckState.ONLY_CAPTCHA && !this.onGround) {
+    if (this.fallingCheck.isStarted()
+        && this.state != CheckState.SUCCESSFUL
+        && this.state != CheckState.ONLY_CAPTCHA
+        && !this.onGround) {
       double currentDeltaY = this.fallingCheck.getLastY() - this.fallingCheck.getPosY();
       CheckResult hoverResult = this.hoverCheck.check(this.onGround, currentDeltaY);
       if (hoverResult.isFailed()) {
@@ -210,7 +227,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
         return;
       }
 
-      PreparedPacket experience = this.plugin.getPackets().getExperience(this.fallingCheck.getTicks());
+      PreparedPacket experience =
+          this.plugin.getPackets().getExperience(this.fallingCheck.getTicks());
       if (experience != null) {
         this.player.writePacketAndFlush(experience);
       }
@@ -223,7 +241,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     if (Settings.IMP.MAIN.FALLING_CHECK_DEBUG) {
       this.logPosition();
     }
-    LimboFilter.getLogger().info("[filter] {} failed falling check: {}", this.proxyPlayer.getUsername(), reason);
+    LimboFilter.getLogger()
+        .info("[filter] {} failed falling check: {}", this.proxyPlayer.getUsername(), reason);
 
     if (this.state == CheckState.CAPTCHA_ON_POSITION_FAILED) {
       this.player.writePacketAndFlush(this.plugin.getPackets().getLastExperience());
@@ -234,18 +253,40 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
   }
 
   private void logPosition() {
-    LimboFilter.getLogger().info(
-            "lastY=" + this.fallingCheck.getLastY() + "; y=" + this.fallingCheck.getPosY()
-                    + "; delta=" + (this.fallingCheck.getLastY() - this.fallingCheck.getPosY())
-                    + "; need=" + this.fallingCheck.getLoadedChunkSpeed(this.fallingCheck.getTicks())
-                    + "; x=" + this.fallingCheck.getPosX() + "; z=" + this.fallingCheck.getPosZ()
-                    + "; validX=" + this.validX + "; validY=" + this.validY + "; validZ=" + this.validZ
-                    + "; ticks=" + this.fallingCheck.getTicks() + "; ignoredTicks=" + this.fallingCheck.getIgnoredTicks()
-                    + "; hoverTicks=" + this.hoverCheck.getHoverTicks()
-                    + "; fastMoves=" + this.packetRateCheck.getFastMoveCount()
-                    + "; state=" + this.state
-                    + "; diff=" + (this.fallingCheck.getLastY() - this.fallingCheck.getPosY() - this.fallingCheck.getLoadedChunkSpeed(this.fallingCheck.getTicks()))
-    );
+    LimboFilter.getLogger()
+        .info(
+            "lastY="
+                + this.fallingCheck.getLastY()
+                + "; y="
+                + this.fallingCheck.getPosY()
+                + "; delta="
+                + (this.fallingCheck.getLastY() - this.fallingCheck.getPosY())
+                + "; need="
+                + this.fallingCheck.getLoadedChunkSpeed(this.fallingCheck.getTicks())
+                + "; x="
+                + this.fallingCheck.getPosX()
+                + "; z="
+                + this.fallingCheck.getPosZ()
+                + "; validX="
+                + this.validX
+                + "; validY="
+                + this.validY
+                + "; validZ="
+                + this.validZ
+                + "; ticks="
+                + this.fallingCheck.getTicks()
+                + "; ignoredTicks="
+                + this.fallingCheck.getIgnoredTicks()
+                + "; hoverTicks="
+                + this.hoverCheck.getHoverTicks()
+                + "; fastMoves="
+                + this.packetRateCheck.getFastMoveCount()
+                + "; state="
+                + this.state
+                + "; diff="
+                + (this.fallingCheck.getLastY()
+                    - this.fallingCheck.getPosY()
+                    - this.fallingCheck.getLoadedChunkSpeed(this.fallingCheck.getTicks())));
   }
 
   @Override
@@ -268,7 +309,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
   @Override
   public void onChat(String message) {
     if (this.state == CheckState.CAPTCHA_POSITION || this.state == CheckState.ONLY_CAPTCHA) {
-      if (this.equalsCaptchaAnswer(message) || (message.startsWith("/") && this.equalsCaptchaAnswer(message.substring(1)))) {
+      if (this.equalsCaptchaAnswer(message)
+          || (message.startsWith("/") && this.equalsCaptchaAnswer(message.substring(1)))) {
         this.player.writePacketAndFlush(this.plugin.getPackets().getResetSlot());
         this.finishCheck();
       } else if (--this.attempts != 0) {
@@ -289,7 +331,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
   }
 
   private void changeStateToCaptcha() {
-    if (this.state != CheckState.ONLY_CAPTCHA && this.version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
+    if (this.state != CheckState.ONLY_CAPTCHA
+        && this.version.noLessThan(ProtocolVersion.MINECRAFT_1_21_2)) {
       this.player.writePacket(this.plugin.getPackets().getFallingCheckChunkUnload());
     }
 
@@ -350,7 +393,8 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     } else if (packet instanceof Interact) {
       Interact interact = (Interact) packet;
       if (interact.getType() == 0 || interact.getType() == 1) {
-        int rotation = this.frameRotation.compute(interact.getEntityId(), (k, v) -> (v != null ? v : 0) + 1);
+        int rotation =
+            this.frameRotation.compute(interact.getEntityId(), (k, v) -> (v != null ? v : 0) + 1);
         EntityMetadata metadata = ItemFrame.createRotationMetadata(this.version, rotation);
         this.player.writePacketAndFlush(new SetEntityMetadata(interact.getEntityId(), metadata));
       }
@@ -362,8 +406,10 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
   // =====================================================================
 
   private void finishCheck() {
-    if (System.currentTimeMillis() - this.joinTime < FALLING_CHECK_TOTAL_TIME && this.state != CheckState.ONLY_CAPTCHA) {
-      if (this.state == CheckState.CAPTCHA_POSITION && this.fallingCheck.getTicks() < Settings.IMP.MAIN.FALLING_CHECK_TICKS) {
+    if (System.currentTimeMillis() - this.joinTime < FALLING_CHECK_TOTAL_TIME
+        && this.state != CheckState.ONLY_CAPTCHA) {
+      if (this.state == CheckState.CAPTCHA_POSITION
+          && this.fallingCheck.getTicks() < Settings.IMP.MAIN.FALLING_CHECK_TICKS) {
         this.state = CheckState.ONLY_POSITION;
       } else {
         if (this.state == CheckState.CAPTCHA_ON_POSITION_FAILED) {
@@ -379,8 +425,11 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
       CheckResult settingsResult = this.clientSettingsCheck.check();
       if (settingsResult.isFailed()) {
         this.statistics.addCheckFailure(settingsResult.getReason());
-        LimboFilter.getLogger().info("[filter] {} failed ClientSettings check: {}",
-                this.proxyPlayer.getUsername(), settingsResult.getReason());
+        LimboFilter.getLogger()
+            .info(
+                "[filter] {} failed ClientSettings check: {}",
+                this.proxyPlayer.getUsername(),
+                settingsResult.getReason());
         this.disconnect(this.plugin.getPackets().getKickClientCheckSettings(), true);
         return;
       }
@@ -411,19 +460,23 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
     int l7Ping = this.player.getPing();
     int l4Ping = this.statistics.getPing(this.proxyPlayer.getRemoteAddress().getAddress());
 
-    if (Settings.IMP.MAIN.TCP_LISTENER.PROXY_DETECTOR_ENABLED && (l7Ping - l4Ping) > Settings.IMP.MAIN.TCP_LISTENER.PROXY_DETECTOR_DIFFERENCE) {
+    if (Settings.IMP.MAIN.TCP_LISTENER.PROXY_DETECTOR_ENABLED
+        && (l7Ping - l4Ping) > Settings.IMP.MAIN.TCP_LISTENER.PROXY_DETECTOR_DIFFERENCE) {
       this.statistics.addProxyCheckFailure();
       this.disconnect(this.plugin.getPackets().getKickProxyCheck(), true);
 
       if (Settings.IMP.MAIN.TCP_LISTENER.DEBUG_ON_FAIL) {
-        LimboFilter.getLogger().info("{} failed proxy check: L4 ping {}, L7 ping {}", this.proxyPlayer, l4Ping, l7Ping);
+        LimboFilter.getLogger()
+            .info(
+                "{} failed proxy check: L4 ping {}, L7 ping {}", this.proxyPlayer, l4Ping, l7Ping);
       }
 
       return true;
     }
 
     if (Settings.IMP.MAIN.TCP_LISTENER.DEBUG_ON_SUCCESS) {
-      LimboFilter.getLogger().info("{} passed proxy check: L4 ping {}, L7 ping {}", this.proxyPlayer, l4Ping, l7Ping);
+      LimboFilter.getLogger()
+          .info("{} passed proxy check: L4 ping {}, L7 ping {}", this.proxyPlayer, l4Ping, l7Ping);
     }
 
     return false;
@@ -453,7 +506,6 @@ public class BotFilterSessionHandler implements LimboSessionHandler {
   }
 
   public enum CheckState {
-
     ONLY_POSITION,
     ONLY_CAPTCHA,
     CAPTCHA_POSITION,

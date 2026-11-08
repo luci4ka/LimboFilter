@@ -35,7 +35,8 @@ public record PackedVector(double x, double y, double z) {
         multiplier |= ((long) ProtocolUtils.readVarInt(buffer) & 4094967295L) << 2L;
       }
 
-      return new PackedVector(unpack(result >> 3) * (double) multiplier,
+      return new PackedVector(
+          unpack(result >> 3) * (double) multiplier,
           unpack(result >> 18) * (double) multiplier,
           unpack(result >> 33) * (double) multiplier);
     }

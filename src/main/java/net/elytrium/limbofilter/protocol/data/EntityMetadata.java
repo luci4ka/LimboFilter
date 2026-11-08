@@ -43,7 +43,13 @@ public class EntityMetadata {
     private final CompoundBinaryTag nbt;
     private final ItemComponentMap map;
 
-    public SlotEntry(boolean present, VirtualItem item, int count, int data, CompoundBinaryTag nbt, ItemComponentMap map) {
+    public SlotEntry(
+        boolean present,
+        VirtualItem item,
+        int count,
+        int data,
+        CompoundBinaryTag nbt,
+        ItemComponentMap map) {
       this.present = present;
       this.item = item;
       this.count = count;
@@ -52,7 +58,8 @@ public class EntityMetadata {
       this.map = map;
     }
 
-    public SlotEntry(VirtualItem item, int count, int data, CompoundBinaryTag nbt, ItemComponentMap map) {
+    public SlotEntry(
+        VirtualItem item, int count, int data, CompoundBinaryTag nbt, ItemComponentMap map) {
       this(true, item, count, data, nbt, map);
     }
 
@@ -184,17 +191,19 @@ public class EntityMetadata {
 
   public void encode(ByteBuf buf, ProtocolVersion protocolVersion) {
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_1_8) <= 0) {
-      this.entries.forEach((index, value) -> {
-        buf.writeByte((index & 0x1F) | (value.getType(protocolVersion) << 5));
-        value.encode(buf, protocolVersion);
-      });
+      this.entries.forEach(
+          (index, value) -> {
+            buf.writeByte((index & 0x1F) | (value.getType(protocolVersion) << 5));
+            value.encode(buf, protocolVersion);
+          });
       buf.writeByte(0x7F);
     } else {
-      this.entries.forEach((index, value) -> {
-        buf.writeByte(index);
-        ProtocolUtils.writeVarInt(buf, value.getType(protocolVersion));
-        value.encode(buf, protocolVersion);
-      });
+      this.entries.forEach(
+          (index, value) -> {
+            buf.writeByte(index);
+            ProtocolUtils.writeVarInt(buf, value.getType(protocolVersion));
+            value.encode(buf, protocolVersion);
+          });
       buf.writeByte(0xFF);
     }
   }

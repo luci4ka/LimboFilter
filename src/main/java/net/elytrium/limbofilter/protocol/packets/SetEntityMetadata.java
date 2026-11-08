@@ -40,12 +40,14 @@ public class SetEntityMetadata implements MinecraftPacket {
   }
 
   @Override
-  public void decode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void decode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     throw new IllegalStateException();
   }
 
   @Override
-  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void encode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_1_7_6) <= 0) {
       buf.writeInt(this.entityId);
     } else {

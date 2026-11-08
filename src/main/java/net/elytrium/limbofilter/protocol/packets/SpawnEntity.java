@@ -42,8 +42,20 @@ public class SpawnEntity implements MinecraftPacket {
   private final float velocityY;
   private final float velocityZ;
 
-  public SpawnEntity(int id, UUID uuid, Function<ProtocolVersion, Integer> type, double positionX, double positionY, double positionZ,
-                     float pitch, float yaw, float headYaw, int data, float velocityX, float velocityY, float velocityZ) {
+  public SpawnEntity(
+      int id,
+      UUID uuid,
+      Function<ProtocolVersion, Integer> type,
+      double positionX,
+      double positionY,
+      double positionZ,
+      float pitch,
+      float yaw,
+      float headYaw,
+      int data,
+      float velocityX,
+      float velocityY,
+      float velocityZ) {
     this.id = id;
     this.uuid = uuid;
     this.type = type;
@@ -60,12 +72,14 @@ public class SpawnEntity implements MinecraftPacket {
   }
 
   @Override
-  public void decode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void decode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     throw new IllegalStateException();
   }
 
   @Override
-  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void encode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     ProtocolUtils.writeVarInt(buf, this.id);
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_1_8) > 0) {
       ProtocolUtils.writeUuid(buf, this.uuid);

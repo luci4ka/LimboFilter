@@ -76,9 +76,10 @@ public class CaptchaGenerator {
   public CaptchaGenerator(LimboFilter plugin) {
     this.plugin = plugin;
     if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
-      this.painter = new CaptchaPainter(
-          MapData.MAP_DIM_SIZE * Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH,
-          MapData.MAP_DIM_SIZE * Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
+      this.painter =
+          new CaptchaPainter(
+              MapData.MAP_DIM_SIZE * Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH,
+              MapData.MAP_DIM_SIZE * Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
     } else {
       this.painter = new CaptchaPainter(MapData.MAP_DIM_SIZE, MapData.MAP_DIM_SIZE);
     }
@@ -89,8 +90,13 @@ public class CaptchaGenerator {
       for (String backplatePath : Settings.IMP.MAIN.CAPTCHA_GENERATOR.BACKPLATE_PATHS) {
         if (!backplatePath.isEmpty()) {
           CraftMapCanvas craftMapCanvas = this.createCraftMapCanvas();
-          craftMapCanvas.drawImage(this.resizeIfNeeded(ImageIO.read(this.plugin.getFile(backplatePath)),
-              this.painter.getWidth(), this.painter.getHeight()), this.painter.getWidth(), this.painter.getHeight());
+          craftMapCanvas.drawImage(
+              this.resizeIfNeeded(
+                  ImageIO.read(this.plugin.getFile(backplatePath)),
+                  this.painter.getWidth(),
+                  this.painter.getHeight()),
+              this.painter.getWidth(),
+              this.painter.getHeight());
           this.backplates.add(craftMapCanvas);
         }
       }
@@ -105,7 +111,9 @@ public class CaptchaGenerator {
       try (OutputStream output = new FileOutputStream("number_spelling.txt")) {
         for (int i = from; i < to; i++) {
           String result = this.spellNumber(i);
-          output.write(String.format("%d %s%s", i, result, System.lineSeparator()).getBytes(StandardCharsets.UTF_8));
+          output.write(
+              String.format("%d %s%s", i, result, System.lineSeparator())
+                  .getBytes(StandardCharsets.UTF_8));
         }
       } catch (IOException e) {
         throw new IllegalArgumentException(e);
@@ -116,81 +124,122 @@ public class CaptchaGenerator {
 
     float fontSize = (float) Settings.IMP.MAIN.CAPTCHA_GENERATOR.RENDER_FONT_SIZE;
 
-    if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT) {
-      fontSize *= Math.min(Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH, Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
+    if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED
+        && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT) {
+      fontSize *=
+          Math.min(Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH, Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
     }
 
-    Map<TextAttribute, Object> textSettings = Map.of(
-        TextAttribute.SIZE,
-        fontSize,
-        TextAttribute.STRIKETHROUGH,
-        Settings.IMP.MAIN.CAPTCHA_GENERATOR.STRIKETHROUGH,
-        TextAttribute.UNDERLINE,
-        Settings.IMP.MAIN.CAPTCHA_GENERATOR.UNDERLINE
-    );
+    Map<TextAttribute, Object> textSettings =
+        Map.of(
+            TextAttribute.SIZE,
+            fontSize,
+            TextAttribute.STRIKETHROUGH,
+            Settings.IMP.MAIN.CAPTCHA_GENERATOR.STRIKETHROUGH,
+            TextAttribute.UNDERLINE,
+            Settings.IMP.MAIN.CAPTCHA_GENERATOR.UNDERLINE);
 
     if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.USE_STANDARD_FONTS) {
-      this.fonts.add(this.getRenderedFont(new Font(Font.SANS_SERIF, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
-      this.fonts.add(this.getRenderedFont(new Font(Font.SERIF, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
-      this.fonts.add(this.getRenderedFont(new Font(Font.MONOSPACED, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
+      this.fonts.add(
+          this.getRenderedFont(
+              new Font(Font.SANS_SERIF, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
+      this.fonts.add(
+          this.getRenderedFont(
+              new Font(Font.SERIF, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
+      this.fonts.add(
+          this.getRenderedFont(
+              new Font(Font.MONOSPACED, Font.PLAIN, (int) fontSize).deriveFont(textSettings)));
     }
 
     if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONTS_PATH != null) {
-      Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONTS_PATH.forEach(fontFile -> {
-        try {
-          if (!fontFile.isEmpty()) {
-            LimboFilter.getLogger().info("Loading font " + fontFile + ".");
-            Font font = Font.createFont(Font.TRUETYPE_FONT, this.plugin.getFile(fontFile));
-            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
-            this.fonts.add(this.getRenderedFont(font.deriveFont(textSettings)));
-          }
-        } catch (FontFormatException | IOException e) {
-          throw new IllegalArgumentException(e);
-        }
-      });
+      Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONTS_PATH.forEach(
+          fontFile -> {
+            try {
+              if (!fontFile.isEmpty()) {
+                LimboFilter.getLogger().info("Loading font " + fontFile + ".");
+                Font font = Font.createFont(Font.TRUETYPE_FONT, this.plugin.getFile(fontFile));
+                GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font);
+                this.fonts.add(this.getRenderedFont(font.deriveFont(textSettings)));
+              }
+            } catch (FontFormatException | IOException e) {
+              throw new IllegalArgumentException(e);
+            }
+          });
     }
 
     if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.GRADIENT.GRADIENT_ENABLED) {
-      BufferedImage gradientImage = new BufferedImage(this.painter.getWidth(), this.painter.getHeight(), BufferedImage.TYPE_INT_RGB);
+      BufferedImage gradientImage =
+          new BufferedImage(
+              this.painter.getWidth(), this.painter.getHeight(), BufferedImage.TYPE_INT_RGB);
       int[] imageData = ((DataBufferInt) gradientImage.getRaster().getDataBuffer()).getData();
       Graphics2D graphics = gradientImage.createGraphics();
 
       ThreadLocalRandom random = ThreadLocalRandom.current();
-      Settings.MAIN.CAPTCHA_GENERATOR.GRADIENT settings = Settings.IMP.MAIN.CAPTCHA_GENERATOR.GRADIENT;
+      Settings.MAIN.CAPTCHA_GENERATOR.GRADIENT settings =
+          Settings.IMP.MAIN.CAPTCHA_GENERATOR.GRADIENT;
 
-      Color[] colors = Settings.IMP.MAIN.CAPTCHA_GENERATOR.RGB_COLOR_LIST.stream().map(s -> Color.decode("#" + s)).toArray(Color[]::new);
+      Color[] colors =
+          Settings.IMP.MAIN.CAPTCHA_GENERATOR.RGB_COLOR_LIST.stream()
+              .map(s -> Color.decode("#" + s))
+              .toArray(Color[]::new);
 
       List<Double> fractions = settings.FRACTIONS;
 
       if (fractions == null || fractions.isEmpty()) {
         double step = 1.0 / colors.length;
-        fractions = IntStream.range(0, colors.length).mapToDouble(i -> i * step).boxed().collect(Collectors.toList());
+        fractions =
+            IntStream.range(0, colors.length)
+                .mapToDouble(i -> i * step)
+                .boxed()
+                .collect(Collectors.toList());
       }
 
       if (colors.length != fractions.size()) {
-        throw new IllegalStateException("The color list and fraction list must contain the same number of elements");
+        throw new IllegalStateException(
+            "The color list and fraction list must contain the same number of elements");
       }
 
       for (int i = 0; i < settings.GRADIENTS_COUNT; ++i) {
-        LinearGradientPaint paint = new LinearGradientPaint(
-            (float) settings.START_X + random.nextFloat() * (float) settings.START_X_RANDOMNESS * this.painter.getWidth(),
-            (float) settings.START_Y + random.nextFloat() * (float) settings.START_Y_RANDOMNESS * this.painter.getHeight(),
-            (float) settings.END_X - random.nextFloat() * (float) settings.END_X_RANDOMNESS * this.painter.getWidth(),
-            (float) settings.END_Y - random.nextFloat() * (float) settings.END_Y_RANDOMNESS * this.painter.getHeight(),
-            Floats.toArray(fractions), colors);
+        LinearGradientPaint paint =
+            new LinearGradientPaint(
+                (float) settings.START_X
+                    + random.nextFloat()
+                        * (float) settings.START_X_RANDOMNESS
+                        * this.painter.getWidth(),
+                (float) settings.START_Y
+                    + random.nextFloat()
+                        * (float) settings.START_Y_RANDOMNESS
+                        * this.painter.getHeight(),
+                (float) settings.END_X
+                    - random.nextFloat()
+                        * (float) settings.END_X_RANDOMNESS
+                        * this.painter.getWidth(),
+                (float) settings.END_Y
+                    - random.nextFloat()
+                        * (float) settings.END_Y_RANDOMNESS
+                        * this.painter.getHeight(),
+                Floats.toArray(fractions),
+                colors);
 
         graphics.setPaint(paint);
         graphics.fillRect(0, 0, gradientImage.getWidth(), gradientImage.getHeight());
 
-        this.colors.add(MapPalette.imageToBytes(imageData,
-            new byte[this.painter.getWidth() * this.painter.getHeight()],
-            ProtocolVersion.MAXIMUM_VERSION));
+        this.colors.add(
+            MapPalette.imageToBytes(
+                imageData,
+                new byte[this.painter.getWidth() * this.painter.getHeight()],
+                ProtocolVersion.MAXIMUM_VERSION));
       }
 
       graphics.dispose();
     } else {
-      Settings.IMP.MAIN.CAPTCHA_GENERATOR.RGB_COLOR_LIST.forEach(e ->
-          this.colors.add(new byte[]{MapPalette.tryFastMatchColor(Integer.parseInt(e, 16) | 0xFF000000, ProtocolVersion.MAXIMUM_VERSION)}));
+      Settings.IMP.MAIN.CAPTCHA_GENERATOR.RGB_COLOR_LIST.forEach(
+          e ->
+              this.colors.add(
+                  new byte[] {
+                    MapPalette.tryFastMatchColor(
+                        Integer.parseInt(e, 16) | 0xFF000000, ProtocolVersion.MAXIMUM_VERSION)
+                  }));
     }
 
     this.backplatesIterator = ThreadLocal.withInitial(this.backplates::listIterator);
@@ -200,18 +249,22 @@ public class CaptchaGenerator {
 
   private CraftMapCanvas createCraftMapCanvas() {
     if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
-      return new CraftMapCanvas(Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH, Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
+      return new CraftMapCanvas(
+          Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH, Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT);
     } else {
       return new CraftMapCanvas(1, 1);
     }
   }
 
   private RenderedFont getRenderedFont(Font font) {
-    boolean scaleFont = Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT;
+    boolean scaleFont =
+        Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED
+            && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT;
     int multiplierX = scaleFont ? Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH : 1;
     int multiplierY = scaleFont ? Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT : 1;
 
-    return new RenderedFont(font,
+    return new RenderedFont(
+        font,
         new FontRenderContext(null, true, true),
         Settings.IMP.MAIN.CAPTCHA_GENERATOR.PATTERN.toCharArray(),
         Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_LETTER_WIDTH * multiplierX,
@@ -220,8 +273,7 @@ public class CaptchaGenerator {
         (float) Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_OUTLINE_RATE,
         Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_OUTLINE_OFFSET_X * multiplierX,
         Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_OUTLINE_OFFSET_Y * multiplierY,
-        1.35
-    );
+        1.35);
   }
 
   private BufferedImage resizeIfNeeded(BufferedImage image, int width, int height) {
@@ -243,7 +295,8 @@ public class CaptchaGenerator {
     byte[] temp = new byte[MapData.MAP_SIZE];
     for (int y = 0; y < MapData.MAP_DIM_SIZE; y++) {
       for (int x = 0; x < MapData.MAP_DIM_SIZE; x++) {
-        temp[y * MapData.MAP_DIM_SIZE + x] = mapImage[x * MapData.MAP_DIM_SIZE + MapData.MAP_DIM_SIZE - y - 1];
+        temp[y * MapData.MAP_DIM_SIZE + x] =
+            mapImage[x * MapData.MAP_DIM_SIZE + MapData.MAP_DIM_SIZE - y - 1];
       }
     }
     System.arraycopy(temp, 0, mapImage, 0, MapData.MAP_SIZE);
@@ -265,38 +318,42 @@ public class CaptchaGenerator {
     this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(threadsCount);
     ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
     LinkedList<Thread> threads = new LinkedList<>();
-    this.executor.setThreadFactory(runnable -> {
-      Thread thread = new Thread(threadGroup, runnable, "CaptchaGeneratorThread");
-      threads.add(thread);
-      thread.setPriority(Thread.MIN_PRIORITY);
-      return thread;
-    });
+    this.executor.setThreadFactory(
+        runnable -> {
+          Thread thread = new Thread(threadGroup, runnable, "CaptchaGeneratorThread");
+          threads.add(thread);
+          thread.setPriority(Thread.MIN_PRIORITY);
+          return thread;
+        });
 
     for (int i = 0; i < Settings.IMP.MAIN.CAPTCHA_GENERATOR.IMAGES_COUNT; ++i) {
       this.executor.execute(() -> this.genNewPacket(this.tempCachedCaptcha));
     }
 
     long start = System.currentTimeMillis();
-    this.executor.execute(() -> {
-      while (this.executor.getCompletedTaskCount() != Settings.IMP.MAIN.CAPTCHA_GENERATOR.IMAGES_COUNT) {
-        // Busy wait.
-      }
+    this.executor.execute(
+        () -> {
+          while (this.executor.getCompletedTaskCount()
+              != Settings.IMP.MAIN.CAPTCHA_GENERATOR.IMAGES_COUNT) {
+            // Busy wait.
+          }
 
-      LimboFilter.getLogger().info("Captcha generated in " + (System.currentTimeMillis() - start) + " ms.");
+          LimboFilter.getLogger()
+              .info("Captcha generated in " + (System.currentTimeMillis() - start) + " ms.");
 
-      if (this.cachedCaptcha != null) {
-        this.cachedCaptcha.dispose();
-      }
+          if (this.cachedCaptcha != null) {
+            this.cachedCaptcha.dispose();
+          }
 
-      threads.forEach(this.plugin.getLimboFactory()::releasePreparedPacketThread);
-      threads.clear();
+          threads.forEach(this.plugin.getLimboFactory()::releasePreparedPacketThread);
+          threads.clear();
 
-      this.cachedCaptcha = this.tempCachedCaptcha;
-      this.tempCachedCaptcha = null;
-      this.cachedCaptcha.build();
-      this.executor.shutdown();
-      this.shouldStop = false;
-    });
+          this.cachedCaptcha = this.tempCachedCaptcha;
+          this.tempCachedCaptcha = null;
+          this.cachedCaptcha.build();
+          this.executor.shutdown();
+          this.shouldStop = false;
+        });
   }
 
   public void genNewPacket(CachedCaptcha cachedCaptcha) {
@@ -317,12 +374,14 @@ public class CaptchaGenerator {
       this.fontIterator.set(this.fonts.listIterator());
     }
 
-    map.drawImageCraft(this.painter.drawCaptcha(this.fontIterator.get().next(), this.nextColor(), answer.key()),
-        this.painter.getWidth(), this.painter.getHeight());
+    map.drawImageCraft(
+        this.painter.drawCaptcha(this.fontIterator.get().next(), this.nextColor(), answer.key()),
+        this.painter.getWidth(),
+        this.painter.getHeight());
     map.drawImage(this.painter.drawCurves(), this.painter.getWidth(), this.painter.getHeight());
 
-    Function<MapPalette.MapVersion, MinecraftPacket[]> packet
-        = mapVersion -> {
+    Function<MapPalette.MapVersion, MinecraftPacket[]> packet =
+        mapVersion -> {
           ThreadLocalRandom random = ThreadLocalRandom.current();
           MinecraftPacket[] packets = new MinecraftPacket[map.getWidth() * map.getHeight()];
 
@@ -334,20 +393,29 @@ public class CaptchaGenerator {
                 this.rotate(mapData);
               }
             }
-            packets[mapId] = (MinecraftPacket) this.plugin.getPacketFactory().createMapDataPacket(mapId, (byte) 0, mapData);
+            packets[mapId] =
+                (MinecraftPacket)
+                    this.plugin.getPacketFactory().createMapDataPacket(mapId, (byte) 0, mapData);
           }
 
           return packets;
         };
     MinecraftPacket[] packets17;
-    if (this.plugin.getLimboFactory().getPrepareMinVersion().compareTo(ProtocolVersion.MINECRAFT_1_7_6) <= 0) {
+    if (this.plugin
+            .getLimboFactory()
+            .getPrepareMinVersion()
+            .compareTo(ProtocolVersion.MINECRAFT_1_7_6)
+        <= 0) {
       int mapCount = map.getWidth() * map.getHeight();
       packets17 = new MinecraftPacket[MapData.MAP_DIM_SIZE * mapCount];
       for (int mapId = 0; mapId < mapCount; mapId++) {
         MapData[] maps17Data = map.getMaps17Data(mapId);
         for (int i = 0; i < MapData.MAP_DIM_SIZE; ++i) {
           packets17[mapId * MapData.MAP_DIM_SIZE + i] =
-              (MinecraftPacket) this.plugin.getPacketFactory().createMapDataPacket(mapId, (byte) 0, maps17Data[i]);
+              (MinecraftPacket)
+                  this.plugin
+                      .getPacketFactory()
+                      .createMapDataPacket(mapId, (byte) 0, maps17Data[i]);
         }
       }
     } else {

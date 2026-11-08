@@ -80,29 +80,41 @@ public class ItemFrame {
     }
   }
 
-  public static EntityMetadata createMapMetadata(LimboFactory limboFactory, ProtocolVersion protocolVersion, int mapId) {
+  public static EntityMetadata createMapMetadata(
+      LimboFactory limboFactory, ProtocolVersion protocolVersion, int mapId) {
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_1_12_2) <= 0) {
-      return new EntityMetadata(Map.of(
-          getMetadataIndex(protocolVersion), new EntityMetadata.SlotEntry(limboFactory.getItem(Item.FILLED_MAP), 1, mapId, null, null)
-      ));
+      return new EntityMetadata(
+          Map.of(
+              getMetadataIndex(protocolVersion),
+              new EntityMetadata.SlotEntry(
+                  limboFactory.getItem(Item.FILLED_MAP), 1, mapId, null, null)));
     } else {
-      return new EntityMetadata(Map.of(
-          getMetadataIndex(protocolVersion), new EntityMetadata.SlotEntry(limboFactory.getItem(Item.FILLED_MAP), 1, 0,
-              CompoundBinaryTag.builder().put("map", IntBinaryTag.intBinaryTag(mapId)).build(),
-              limboFactory.createItemComponentMap().add(ProtocolVersion.MINECRAFT_1_20_5, "minecraft:map_id", mapId))
-      ));
+      return new EntityMetadata(
+          Map.of(
+              getMetadataIndex(protocolVersion),
+              new EntityMetadata.SlotEntry(
+                  limboFactory.getItem(Item.FILLED_MAP),
+                  1,
+                  0,
+                  CompoundBinaryTag.builder().put("map", IntBinaryTag.intBinaryTag(mapId)).build(),
+                  limboFactory
+                      .createItemComponentMap()
+                      .add(ProtocolVersion.MINECRAFT_1_20_5, "minecraft:map_id", mapId))));
     }
   }
 
-  public static EntityMetadata createRotationMetadata(ProtocolVersion protocolVersion, int rotation) {
+  public static EntityMetadata createRotationMetadata(
+      ProtocolVersion protocolVersion, int rotation) {
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_1_8) <= 0) {
-      return new EntityMetadata(Map.of(
-          (byte) (getMetadataIndex(protocolVersion) + 1), new EntityMetadata.ByteEntry(rotation % 4)
-      ));
+      return new EntityMetadata(
+          Map.of(
+              (byte) (getMetadataIndex(protocolVersion) + 1),
+              new EntityMetadata.ByteEntry(rotation % 4)));
     } else {
-      return new EntityMetadata(Map.of(
-          (byte) (getMetadataIndex(protocolVersion) + 1), new EntityMetadata.VarIntEntry(rotation)
-      ));
+      return new EntityMetadata(
+          Map.of(
+              (byte) (getMetadataIndex(protocolVersion) + 1),
+              new EntityMetadata.VarIntEntry(rotation)));
     }
   }
 }

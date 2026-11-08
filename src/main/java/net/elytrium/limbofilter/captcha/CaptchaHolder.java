@@ -37,7 +37,11 @@ public class CaptchaHolder {
     this.next = another.next;
   }
 
-  public CaptchaHolder(String answer, CaptchaHolder next, MinecraftPacket[] mapDataPackets17, MinecraftPacket[][] mapDataPacket) {
+  public CaptchaHolder(
+      String answer,
+      CaptchaHolder next,
+      MinecraftPacket[] mapDataPackets17,
+      MinecraftPacket[][] mapDataPacket) {
     this.answer = answer;
     this.next = next;
     this.mapDataPackets17 = mapDataPackets17;
@@ -57,7 +61,9 @@ public class CaptchaHolder {
     if (version.compareTo(ProtocolVersion.MINECRAFT_1_8) < 0) {
       return this.mapDataPackets17 == null ? this.preparedMapPacket : this.mapDataPackets17;
     } else {
-      return this.mapDataPacket == null ? this.preparedMapPacket : this.mapDataPacket[version.ordinal()];
+      return this.mapDataPacket == null
+          ? this.preparedMapPacket
+          : this.mapDataPacket[version.ordinal()];
     }
   }
 

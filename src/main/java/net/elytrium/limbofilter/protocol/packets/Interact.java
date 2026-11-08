@@ -35,7 +35,8 @@ public class Interact implements MinecraftPacket {
   private boolean sneaking;
 
   @Override
-  public void decode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void decode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     if (protocolVersion.compareTo(ProtocolVersion.MINECRAFT_26_1) >= 0) {
       this.entityId = ProtocolUtils.readVarInt(buf);
       this.hand = ProtocolUtils.readVarInt(buf);
@@ -67,7 +68,8 @@ public class Interact implements MinecraftPacket {
   }
 
   @Override
-  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
+  public void encode(
+      ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion protocolVersion) {
     throw new IllegalStateException();
   }
 

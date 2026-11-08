@@ -36,32 +36,86 @@ public class Settings extends YamlConfig {
   public String VERSION = BuildConstants.FILTER_VERSION;
 
   @Comment({
-      "Available serializers:",
-      "LEGACY_AMPERSAND - \"&c&lExample &c&9Text\".",
-      "LEGACY_SECTION - \"§c§lExample §c§9Text\".",
-      "MINIMESSAGE - \"<bold><red>Example</red> <blue>Text</blue></bold>\". (https://webui.adventure.kyori.net/)",
-      "GSON - \"[{\"text\":\"Example\",\"bold\":true,\"color\":\"red\"},{\"text\":\" \",\"bold\":true},{\"text\":\"Text\",\"bold\":true,\"color\":\"blue\"}]\". (https://minecraft.tools/en/json_text.php/)",
-      "GSON_COLOR_DOWNSAMPLING - Same as GSON, but uses downsampling."
+          "Available serializers:",
+          "LEGACY_AMPERSAND - \"&c&lExample &c&9Text\".",
+          "LEGACY_SECTION - \"§c§lExample §c§9Text\".",
+          "MINIMESSAGE - \"<bold><red>Example</red> <blue>Text</blue></bold>\". (https://webui.adventure.kyori.net/)",
+          "GSON - \"[{\"text\":\"Example\",\"bold\":true,\"color\":\"red\"},{\"text\":\" \",\"bold\":true},{\"text\":\"Text\",\"bold\":true,\"color\":\"blue\"}]\". (https://minecraft.tools/en/json_text.php/)",
+          "GSON_COLOR_DOWNSAMPLING - Same as GSON, but uses downsampling."
   })
   public Serializers SERIALIZER = Serializers.LEGACY_AMPERSAND;
+
   public String PREFIX = "LimboFilter &6>>&f";
 
   @Create
   public MAIN MAIN;
 
+  // =====================================================================
+  //  Основные настройки
+  // =====================================================================
+
   @Comment("Don't use \\n, use {NL} for new line, and {PRFX} for prefix.")
   public static class MAIN {
 
+    // ---- Проверки клиента ----
+
     @Comment("Check if player's Minecraft client sends the network packet with the settings.")
     public boolean CHECK_CLIENT_SETTINGS = true;
+
     @Comment("Check if player's Minecraft client has a brand.")
     public boolean CHECK_CLIENT_BRAND = true;
+
     @Comment("If a player's Minecraft client brand (e.g., fabric or forge) is set here, then that player will be kicked.")
     public List<String> BLOCKED_CLIENT_BRANDS = List.of("brand1", "brand2");
+
+    @Comment("Min allowed client view distance. Lower = stricter. Normal clients: 2-32.")
+    public int MIN_CLIENT_VIEW_DISTANCE = 2;
+
+    @Comment("Max allowed client view distance. Lower = stricter. Normal clients: 2-32.")
+    public int MAX_CLIENT_VIEW_DISTANCE = 32;
+
+    // ---- Кеш проверенных игроков ----
+
     @Comment("Time in milliseconds, how frequently will the cache list with verified players be reset. Before that time, verified players can join the server without passing antibot checks.")
     public long PURGE_CACHE_MILLIS = 3600000;
+
+    // ---- Капча ----
+
     @Comment("Max attempts, which a player has to solve the captcha.")
     public int CAPTCHA_ATTEMPTS = 2;
+
+    @Comment("Duration (in seconds) between regeneration of captchas")
+    public long CAPTCHA_REGENERATE_RATE = 3600;
+
+    @Comment("Should captcha be displayed in the left hand. May cause problems with entering captcha for users with 4:3 monitors. Version: 1.9+")
+    public boolean CAPTCHA_LEFT_HAND = false;
+
+    @Comment("Should we prevent the player from falling after passing the fall check, or after they join the game when the ONLY_CAPTCHA mode is enabled")
+    public boolean DISABLE_FALLING_ON_CAPTCHA = true;
+
+    // ---- Проверка падения ----
+
+    @Comment("Duration of Falling Check in Minecraft ticks. Higher = more time for bot to fail.")
+    public int FALLING_CHECK_TICKS = 100;
+
+    @Comment("Maximum time to check the player in milliseconds. If the player stays on the filter limbo for longer than this time, then the check will fail.")
+    public int TIME_OUT = 60000;
+
+    @Comment("Same, but for Geyser users.")
+    public int GEYSER_TIME_OUT = 45000;
+
+    @Comment("The timeout for Netty. Max ping while being on the filter limbo. Used to remove useless buffers from RAM.")
+    public int MAX_PING = 3500;
+
+    @Comment("Change the parameters below only if you know what they mean.")
+    public int NON_VALID_POSITION_XZ_ATTEMPTS = 10;
+
+    public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
+
+    @Comment("Maximum allowed difference between actual and vanilla falling speed. Lower = stricter.")
+    public double MAX_VALID_POSITION_DIFFERENCE = 0.001;
+
+    // ---- Новые проверки (Sonar-style) ----
 
     @Comment("Max ticks a player can stay in air without falling before being kicked (Hover check).")
     public int MAX_HOVER_TICKS = 10;
@@ -71,58 +125,53 @@ public class Settings extends YamlConfig {
 
     @Comment("Max consecutive fast movement packets before kick.")
     public int MAX_FAST_MOVES = 10;
-    @Comment("Min allowed client view distance. Lower = stricter. Normal clients: 2-32.")
-    public int MIN_CLIENT_VIEW_DISTANCE = 2;
 
-    @Comment("Max allowed client view distance. Lower = stricter. Normal clients: 2-32.")
-    public int MAX_CLIENT_VIEW_DISTANCE = 32;
-    @Comment("Duration of Falling Check in Minecraft ticks. Higher = more time for bot to fail.")
-    public int FALLING_CHECK_TICKS = 200;
-    @Comment("Maximum time to check the player in milliseconds. If the player stays on the filter limbo for longer than this time, then the check will fail.")
-    public int TIME_OUT = 15000;
-    @Comment("Same, but for Geyser users.")
-    public int GEYSER_TIME_OUT = 45000;
-    @Comment("The timeout for Netty. Max ping while being on the filter limbo. Used to remove useless buffers from RAM.")
-    public int MAX_PING = 3500;
-    @Comment("Change the parameters below only if you know what they mean.")
-    public int NON_VALID_POSITION_XZ_ATTEMPTS = 10;
-    public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
-    @Comment("Maximum allowed difference between actual and vanilla falling speed. Lower = stricter.")
-    public double MAX_VALID_POSITION_DIFFERENCE = 0.001;
+    // ---- Очередь ----
+
     @Comment("Max players simultaneously in filter limbo. Prevents RAM exhaustion during bot attacks.")
     public int MAX_CONCURRENT_CHECKS = 50;
+
     @Comment("How long a player waits in queue before being kicked (millis).")
-    public long QUEUE_TIMEOUT_MILLIS = 10000;
+    public long QUEUE_TIMEOUT_MILLIS = 15000;
+
+    // ---- Дебаг ----
+
     @Comment("Parameter for developers and contributors.")
     public boolean FALLING_CHECK_DEBUG = false;
-    @Comment("Should captcha be displayed in the left hand. May cause problems with entering captcha for users with 4:3 monitors. Version: 1.9+")
-    public boolean CAPTCHA_LEFT_HAND = false;
+
+    // ---- Состояние проверки ----
 
     @Comment({
-        "Available states: ONLY_POSITION, ONLY_CAPTCHA, CAPTCHA_POSITION, CAPTCHA_ON_POSITION_FAILED",
-        "Meaning: ",
-        "ONLY_POSITION -> Only falling check (Player will be spawned in the void, server will check player's coordinates, speed, acceleration).",
-        "ONLY_CAPTCHA -> Only captcha (Map items with a captcha image will be given to the players, players need to solve captcha, and send the answer in the chat).",
-        "CAPTCHA_POSITION -> Falling and Captcha checking concurrently (Player will be kicked, if he fails either falling check or captcha checking).",
-        "CAPTCHA_ON_POSITION_FAILED -> Initially, the falling check will be started, but if the player fails that check, the captcha checking will be started."
+            "Available states: ONLY_POSITION, ONLY_CAPTCHA, CAPTCHA_POSITION, CAPTCHA_ON_POSITION_FAILED",
+            "Meaning: ",
+            "ONLY_POSITION -> Only falling check (Player will be spawned in the void, server will check player's coordinates, speed, acceleration).",
+            "ONLY_CAPTCHA -> Only captcha (Map items with a captcha image will be given to the players, players need to solve captcha, and send the answer in the chat).",
+            "CAPTCHA_POSITION -> Falling and Captcha checking concurrently (Player will be kicked, if he fails either falling check or captcha checking).",
+            "CAPTCHA_ON_POSITION_FAILED -> Initially, the falling check will be started, but if the player fails that check, the captcha checking will be started."
     })
-    public BotFilterSessionHandler.CheckState CHECK_STATE = BotFilterSessionHandler.CheckState.CAPTCHA_POSITION;
-    @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
+    public BotFilterSessionHandler.CheckState CHECK_STATE = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
 
     @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE = BotFilterSessionHandler.CheckState.CAPTCHA_POSITION;
+    public BotFilterSessionHandler.CheckState CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+
     @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
+    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+
+    @Comment("See \"filter-auto-toggle.check-state-toggle\".")
+    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+
+    // ---- Мир ----
 
     public boolean LOAD_WORLD = false;
+
     @Comment({
-        "World file types:",
-        " SCHEMATIC (MCEdit .schematic, 1.12.2 and lower, not recommended)",
-        " STRUCTURE (structure block .nbt, any Minecraft version is supported, but the latest one is recommended).",
-        " WORLDEDIT_SCHEM (WorldEdit .schem, any Minecraft version is supported, but the latest one is recommended)."
+            "World file types:",
+            " SCHEMATIC (MCEdit .schematic, 1.12.2 and lower, not recommended)",
+            " STRUCTURE (structure block .nbt, any Minecraft version is supported, but the latest one is recommended).",
+            " WORLDEDIT_SCHEM (WorldEdit .schem, any Minecraft version is supported, but the latest one is recommended)."
     })
     public BuiltInWorldFileType WORLD_FILE_TYPE = BuiltInWorldFileType.STRUCTURE;
+
     public String WORLD_FILE_PATH = "world.nbt";
 
     @Comment("World time in ticks (24000 ticks == 1 in-game day)")
@@ -137,11 +186,10 @@ public class Settings extends YamlConfig {
     @Comment("Available: ADVENTURE, CREATIVE, SURVIVAL, SPECTATOR")
     public GameMode GAME_MODE = GameMode.ADVENTURE;
 
-    @Comment({
-        "Should we prevent the player from falling after passing the fall check, or after they join the game when the ONLY_CAPTCHA mode is enabled",
-        "This might be useful when using a world schema to allow players to walk in that world"
-    })
-    public boolean DISABLE_FALLING_ON_CAPTCHA = true;
+    @Comment("Available dimensions: OVERWORLD, NETHER, THE_END")
+    public Dimension BOTFILTER_DIMENSION = Dimension.THE_END;
+
+    // ---- Единицы времени для статистики ----
 
     @Comment("Unit of time in seconds for the Auto Toggles and Statistics.")
     public int UNIT_OF_TIME_CPS = 300;
@@ -152,8 +200,7 @@ public class Settings extends YamlConfig {
     @Comment("Time in milliseconds how much we should wait before re-enabling logs after attacks")
     public int LOG_ENABLER_CHECK_REFRESH_RATE = 1000;
 
-    @Comment("Duration (in seconds) between regeneration of captchas")
-    public long CAPTCHA_REGENERATE_RATE = 3600;
+    // ---- Координаты ----
 
     @Comment("Coordinates for the falling check")
     @Create
@@ -166,6 +213,35 @@ public class Settings extends YamlConfig {
       public int TELEPORT_ID = 44;
     }
 
+    @Create
+    public COORDS COORDS;
+
+    public static class COORDS {
+
+      public double CAPTCHA_X = -1.5;
+
+      @Comment("If your server supports Minecraft 1.7, don't set captcha-y to 0. https://media.discordapp.net/attachments/878241549857738793/915165038464098314/unknown.png")
+      public double CAPTCHA_Y = 128;
+
+      public double CAPTCHA_Z = 0.5;
+      public double CAPTCHA_YAW = 90;
+      public double CAPTCHA_PITCH = 38;
+      public double FALLING_CHECK_YAW = 90;
+      public double FALLING_CHECK_PITCH = 10;
+    }
+
+    @Create
+    public Settings.MAIN.WORLD_COORDS WORLD_COORDS;
+
+    public static class WORLD_COORDS {
+
+      public int X = 0;
+      public int Y = 0;
+      public int Z = 0;
+    }
+
+    // ---- Whitelist ----
+
     @Comment("A \"USERNAME - IP\" list containing information about players who should join the server without verification.")
     public List<WhitelistedPlayer> WHITELISTED_PLAYERS = List.of(new WhitelistedPlayer());
 
@@ -175,23 +251,24 @@ public class Settings extends YamlConfig {
       public String IP = "127.0.0.1";
     }
 
+    // ---- Авто-тогглы ----
+
     @Create
     public FILTER_AUTO_TOGGLE FILTER_AUTO_TOGGLE;
 
     @Comment({
-        "Minimum/maximum total connections amount per the unit of time to toggle anti-bot checks.",
-        "-1 to disable the check.",
-        "0 to enable on any connections per the unit of time."
+            "Minimum/maximum total connections amount per the unit of time to toggle anti-bot checks.",
+            "-1 to disable the check.",
+            "0 to enable on any connections per the unit of time."
     })
     public static class FILTER_AUTO_TOGGLE {
 
-      // TODO: Норм комменты
       @Comment("All players will bypass all anti-bot checks")
       public int ALL_BYPASS = 0;
 
       @Comment({
-          "Online mode players will bypass all anti-bot checks.",
-          "Doesn't work with online-mode-verify: -1"
+              "Online mode players will bypass all anti-bot checks.",
+              "Doesn't work with online-mode-verify: -1"
       })
       public int ONLINE_MODE_BYPASS = 49;
 
@@ -199,18 +276,18 @@ public class Settings extends YamlConfig {
       public int GEYSER_BYPASS = 0;
 
       @Comment({
-          "Verify Online Mode connection before AntiBot.",
-          "If connections per unit of time amount is bigger than the limit: online mode players will need to reconnect.",
-          "Else: Some attacks can consume more cpu and network, and can lead to long-lasting Mojang rate-limiting.",
-          "Only works if you have an auth plugin installed. In other cases you should configure need-to-reconnect parameter"
+              "Verify Online Mode connection before AntiBot.",
+              "If connections per unit of time amount is bigger than the limit: online mode players will need to reconnect.",
+              "Else: Some attacks can consume more cpu and network, and can lead to long-lasting Mojang rate-limiting.",
+              "Only works if you have an auth plugin installed. In other cases you should configure need-to-reconnect parameter"
       })
       public int ONLINE_MODE_VERIFY = 79;
 
       @Comment({
-          "Toggles check-state/check-state-non-toggled.",
-          "It is not recommended to enable it, if you want to protect your server from spam-bots.",
-          "If connections per unit of time amount is bigger than the limit: check-state will be used.",
-          "Else: check-state-non-toggled will be used."
+              "Toggles check-state/check-state-non-toggled.",
+              "It is not recommended to enable it, if you want to protect your server from spam-bots.",
+              "If connections per unit of time amount is bigger than the limit: check-state will be used.",
+              "Else: check-state-non-toggled will be used."
       })
       public int CHECK_STATE_TOGGLE = 0;
 
@@ -224,15 +301,7 @@ public class Settings extends YamlConfig {
       public int DISABLE_LOG = 129;
     }
 
-    @Create
-    public Settings.MAIN.WORLD_COORDS WORLD_COORDS;
-
-    public static class WORLD_COORDS {
-
-      public int X = 0;
-      public int Y = 0;
-      public int Z = 0;
-    }
+    // ---- Генератор капчи ----
 
     @Create
     public MAIN.CAPTCHA_GENERATOR CAPTCHA_GENERATOR;
@@ -241,12 +310,16 @@ public class Settings extends YamlConfig {
 
       @Comment("Prepares Captcha packets, consumes x8 more RAM, but improves CPU performance during bot attacks. It's recommended to disable it, if you have less than 2GB of RAM.")
       public boolean PREPARE_CAPTCHA_PACKETS = false;
+
       @Comment("List of paths to the background image to draw on captcha. Any format, 128x128 128x128 px (will be automatically resized and stretched to the correct size). [] if empty.")
       public List<String> BACKPLATE_PATHS = List.of("");
+
       @Comment("Path to the font files to draw on captcha (ttf), can be empty.")
       public List<String> FONTS_PATH = List.of("");
+
       @Comment("Use standard fonts(SANS_SERIF/SERIF/MONOSPACED), use false only if you provide fonts path")
       public boolean USE_STANDARD_FONTS = true;
+
       public int LETTER_OFFSET_X = 12;
       public int LETTER_OFFSET_Y = 0;
       public int FONT_LETTER_SPACING_X = -14;
@@ -263,50 +336,61 @@ public class Settings extends YamlConfig {
       public int FONT_OUTLINE_OFFSET_X = -4;
       public int FONT_OUTLINE_OFFSET_Y = 4;
       public int FONT_OUTLINE_OVERRIDE_RADIUS = 1;
+
       @Comment("Set 0 to disable")
       public int CURVE_SIZE = 2;
+
       @Comment("Set 0 to disable")
       public int CURVES_AMOUNT = 3;
+
       @Comment("RGB colors without #")
       public List<String> CURVES_COLORS = List.of("000000");
+
       public boolean STRIKETHROUGH = false;
       public boolean UNDERLINE = true;
       public String PATTERN = "abcdefghijklmnopqrstuvwxyz1234567890";
+
       @Comment("If enabled, both lowercase and uppercase captcha answers entered by players will be correct")
       public boolean IGNORE_CASE = true;
+
       public int LENGTH = 3;
       public int IMAGES_COUNT = 1000;
       public boolean NUMBER_SPELLING = false;
+
       @Comment({
-          "Set to true if you want to verify the number spelling configuration.",
-          "Results will be saved to the number_spelling.txt file."
+              "Set to true if you want to verify the number spelling configuration.",
+              "Results will be saved to the number_spelling.txt file."
       })
       public boolean SAVE_NUMBER_SPELLING_OUTPUT = false;
+
       public boolean EACH_WORD_ON_SEPARATE_LINE = true;
+
       @Comment({
-          "If the number ends with any key specified here, the corresponding value will be used.",
-          "For example: if exception 11 is specified with value 'eleven', the number 411 will be spelt as 'four hundred eleven'."
+              "If the number ends with any key specified here, the corresponding value will be used.",
+              "For example: if exception 11 is specified with value 'eleven', the number 411 will be spelt as 'four hundred eleven'."
       })
       public Map<String, String> NUMBER_SPELLING_EXCEPTIONS = Map.of(
-          "11", "eleven",
-          "12", "twelve",
-          "13", "thirteen",
-          "14", "fourteen",
-          "15", "fifteen",
-          "16", "sixteen",
-          "17", "seventeen",
-          "18", "eighteen",
-          "19", "nineteen"
+              "11", "eleven",
+              "12", "twelve",
+              "13", "thirteen",
+              "14", "fourteen",
+              "15", "fifteen",
+              "16", "sixteen",
+              "17", "seventeen",
+              "18", "eighteen",
+              "19", "nineteen"
       );
+
       @Comment({
-          "null or \"\" means that the digit should be skipped.",
-          "Note: all the characters used here (including the space) must be listed in pattern."
+              "null or \"\" means that the digit should be skipped.",
+              "Note: all the characters used here (including the space) must be listed in pattern."
       })
       public List<List<String>> NUMBER_SPELLING_WORDS = List.of(
-          List.of("", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"),
-          List.of("", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"),
-          List.of("", "one hundred", "two hundred", "three hundred", "four hundred", "five hundred", "six hundred", "seven hundred", "eight hundred", "nine hundred")
+              List.of("", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"),
+              List.of("", "ten", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"),
+              List.of("", "one hundred", "two hundred", "three hundred", "four hundred", "five hundred", "six hundred", "seven hundred", "eight hundred", "nine hundred")
       );
+
       public List<String> RGB_COLOR_LIST = List.of("000000", "AA0000", "00AA00", "0000AA", "AAAA00", "AA00AA", "00AAAA");
 
       @Create
@@ -324,10 +408,13 @@ public class Settings extends YamlConfig {
         public double START_Y_RANDOMNESS = 2;
         public double END_X_RANDOMNESS = 0;
         public double END_Y_RANDOMNESS = 2;
+
         @Comment("Numbers ranging from 0.0 to 1.0 specifying the distribution of colors along the gradient. Can be empty.")
         public List<Double> FRACTIONS = List.of(0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9);
       }
     }
+
+    // ---- Капча на рамках ----
 
     @Create
     public FRAMED_CAPTCHA FRAMED_CAPTCHA;
@@ -361,25 +448,7 @@ public class Settings extends YamlConfig {
       }
     }
 
-    @Comment(
-        "Available dimensions: OVERWORLD, NETHER, THE_END"
-    )
-    public Dimension BOTFILTER_DIMENSION = Dimension.THE_END;
-
-    @Create
-    public COORDS COORDS;
-
-    public static class COORDS {
-
-      public double CAPTCHA_X = -1.5;
-      @Comment("If your server supports Minecraft 1.7, don't set captcha-y to 0. https://media.discordapp.net/attachments/878241549857738793/915165038464098314/unknown.png")
-      public double CAPTCHA_Y = 128;
-      public double CAPTCHA_Z = 0.5;
-      public double CAPTCHA_YAW = 90;
-      public double CAPTCHA_PITCH = 38;
-      public double FALLING_CHECK_YAW = 90;
-      public double FALLING_CHECK_PITCH = 10;
-    }
+    // ---- TCP Listener ----
 
     @Create
     public MAIN.TCP_LISTENER TCP_LISTENER;
@@ -387,12 +456,12 @@ public class Settings extends YamlConfig {
     public static class TCP_LISTENER {
 
       @Comment({
-          "Experimental proxy check feature",
-          "Checks the proxy via comparing L4 (TCP PSH+ACK -> TCP ACK) and L7 (Minecraft KeepAlive) ping",
-          "Works better with falling check enabled (150+ falling-check-ticks)",
-          "Needs libpcap (libpcap-dev) on Linux; WinPcap/npcap on Windows",
-          "Needs CAP_NET_RAW (or super-user) on Linux",
-          "Doesn't work if Velocity is behind reverse-proxy (haproxy, protection services, etc)",
+              "Experimental proxy check feature",
+              "Checks the proxy via comparing L4 (TCP PSH+ACK -> TCP ACK) and L7 (Minecraft KeepAlive) ping",
+              "Works better with falling check enabled (150+ falling-check-ticks)",
+              "Needs libpcap (libpcap-dev) on Linux; WinPcap/npcap on Windows",
+              "Needs CAP_NET_RAW (or super-user) on Linux",
+              "Doesn't work if Velocity is behind reverse-proxy (haproxy, protection services, etc)",
       })
       public boolean PROXY_DETECTOR_ENABLED = false;
 
@@ -412,28 +481,36 @@ public class Settings extends YamlConfig {
 
       @Comment("Log L4 and L7 ping")
       public boolean DEBUG_ON_FAIL = false;
+
       public boolean DEBUG_ON_SUCCESS = false;
     }
+
+    // ---- Права команд ----
 
     @Create
     public MAIN.COMMAND_PERMISSION_STATE COMMAND_PERMISSION_STATE;
 
     @Comment({
-        "Available values: FALSE, TRUE, PERMISSION",
-        " FALSE - the command will be disallowed",
-        " TRUE - the command will be allowed if player has false permission state",
-        " PERMISSION - the command will be allowed if player has true permission state"
+            "Available values: FALSE, TRUE, PERMISSION",
+            " FALSE - the command will be disallowed",
+            " TRUE - the command will be allowed if player has false permission state",
+            " PERMISSION - the command will be allowed if player has true permission state"
     })
     public static class COMMAND_PERMISSION_STATE {
       @Comment("Permission: limbofilter.admin.sendfilter")
       public CommandPermissionState SEND_FILTER = CommandPermissionState.PERMISSION;
+
       @Comment("Permission: limbofilter.admin.reload")
       public CommandPermissionState RELOAD = CommandPermissionState.PERMISSION;
+
       @Comment("Permission: limbofilter.admin.stats")
       public CommandPermissionState STATS = CommandPermissionState.PERMISSION;
+
       @Comment("Permission: limbofilter.admin.help")
       public CommandPermissionState HELP = CommandPermissionState.TRUE;
     }
+
+    // ---- Сообщения ----
 
     @Create
     public MAIN.STRINGS STRINGS;

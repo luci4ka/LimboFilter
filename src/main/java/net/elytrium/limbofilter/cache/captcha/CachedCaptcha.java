@@ -32,14 +32,13 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 public class CachedCaptcha {
   private final LimboFilter plugin;
   private final AtomicInteger threadIdCounter = new AtomicInteger(0);
-  private final ThreadLocal<Integer> threadId = ThreadLocal.withInitial(this.threadIdCounter::getAndIncrement);
+  private final ThreadLocal<Integer> threadId =
+      ThreadLocal.withInitial(this.threadIdCounter::getAndIncrement);
   private final CaptchaHolder[] firstHolders;
   private final CaptchaHolder[] lastHolders;
 
-  @MonotonicNonNull
-  private CaptchaHolder firstHolder;
-  @MonotonicNonNull
-  private CaptchaHolder lastHolder;
+  @MonotonicNonNull private CaptchaHolder firstHolder;
+  @MonotonicNonNull private CaptchaHolder lastHolder;
   private ThreadLocal<CaptchaHolder> captchaIterator;
   private boolean disposed;
 
@@ -49,7 +48,10 @@ public class CachedCaptcha {
     this.lastHolders = new CaptchaHolder[threadsCount];
   }
 
-  public void addCaptchaPacket(String answer, MinecraftPacket[] mapDataPackets17, Function<MapPalette.MapVersion, MinecraftPacket[]> mapDataPacket) {
+  public void addCaptchaPacket(
+      String answer,
+      MinecraftPacket[] mapDataPackets17,
+      Function<MapPalette.MapVersion, MinecraftPacket[]> mapDataPacket) {
     // It takes time to stop the generator thread, so we're stopping adding new packets there too.
     if (this.disposed) {
       return;
@@ -58,7 +60,8 @@ public class CachedCaptcha {
     int threadId = this.threadId.get();
 
     boolean isFirst = this.firstHolders[threadId] == null;
-    CaptchaHolder holder = this.getCaptchaHolder(answer, this.firstHolders[threadId], mapDataPackets17, mapDataPacket);
+    CaptchaHolder holder =
+        this.getCaptchaHolder(answer, this.firstHolders[threadId], mapDataPackets17, mapDataPacket);
     this.firstHolders[threadId] = holder;
 
     if (isFirst) {
@@ -66,17 +69,23 @@ public class CachedCaptcha {
     }
   }
 
-  private CaptchaHolder getCaptchaHolder(String answer, CaptchaHolder next, MinecraftPacket[] mapDataPackets17,
-                                         Function<MapPalette.MapVersion, MinecraftPacket[]> mapDataPacket) {
+  private CaptchaHolder getCaptchaHolder(
+      String answer,
+      CaptchaHolder next,
+      MinecraftPacket[] mapDataPackets17,
+      Function<MapPalette.MapVersion, MinecraftPacket[]> mapDataPacket) {
     MinecraftPacket[][] mapDataPacketEnum = new MinecraftPacket[ProtocolVersion.values().length][];
     LimboFactory limboFactory = this.plugin.getLimboFactory();
     ProtocolVersion prepareMinVersion = limboFactory.getPrepareMinVersion();
     ProtocolVersion prepareMaxVersion = limboFactory.getPrepareMaxVersion();
     for (MapPalette.MapVersion version : MapPalette.MapVersion.values()) {
       for (ProtocolVersion mapProtocolVersion : version.getVersions()) {
-        if (prepareMinVersion.compareTo(mapProtocolVersion) <= 0 && prepareMaxVersion.compareTo(mapProtocolVersion) >= 0) {
+        if (prepareMinVersion.compareTo(mapProtocolVersion) <= 0
+            && prepareMaxVersion.compareTo(mapProtocolVersion) >= 0) {
           MinecraftPacket[] packets = mapDataPacket.apply(version);
-          version.getVersions().forEach(protocolVersion -> mapDataPacketEnum[protocolVersion.ordinal()] = packets);
+          version
+              .getVersions()
+              .forEach(protocolVersion -> mapDataPacketEnum[protocolVersion.ordinal()] = packets);
           break;
         }
       }
@@ -85,17 +94,27 @@ public class CachedCaptcha {
     if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.PREPARE_CAPTCHA_PACKETS) {
       PreparedPacket prepared = this.plugin.getLimboFactory().createPreparedPacket();
       if (Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED) {
-        for (int i = 0; i < Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH * Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT; i++) {
+        for (int i = 0;
+            i < Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH * Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT;
+            i++) {
           final int index = i;
-          prepared.prepare(version -> mapDataPacketEnum[version.ordinal()][index], ProtocolVersion.MINECRAFT_1_8);
+          prepared.prepare(
+              version -> mapDataPacketEnum[version.ordinal()][index],
+              ProtocolVersion.MINECRAFT_1_8);
         }
       } else {
-        prepared.prepare(version -> mapDataPacketEnum[version.ordinal()][0], ProtocolVersion.MINECRAFT_1_8);
+        prepared.prepare(
+            version -> mapDataPacketEnum[version.ordinal()][0], ProtocolVersion.MINECRAFT_1_8);
       }
-      return new CaptchaHolder(answer, next, prepared
-          .prepare(mapDataPackets17, ProtocolVersion.MINECRAFT_1_7_2, ProtocolVersion.MINECRAFT_1_7_6)
-          .build()
-      );
+      return new CaptchaHolder(
+          answer,
+          next,
+          prepared
+              .prepare(
+                  mapDataPackets17,
+                  ProtocolVersion.MINECRAFT_1_7_2,
+                  ProtocolVersion.MINECRAFT_1_7_6)
+              .build());
     } else {
       return new CaptchaHolder(answer, next, mapDataPackets17, mapDataPacketEnum);
     }
@@ -112,7 +131,11 @@ public class CachedCaptcha {
     this.lastHolder.setNext(this.firstHolder);
     this.threadIdCounter.set(0);
 
-    this.captchaIterator = ThreadLocal.withInitial(() -> new CaptchaHolder(this.firstHolders[this.threadId.get() % this.firstHolders.length]));
+    this.captchaIterator =
+        ThreadLocal.withInitial(
+            () ->
+                new CaptchaHolder(
+                    this.firstHolders[this.threadId.get() % this.firstHolders.length]));
   }
 
   public CaptchaHolder getNextCaptcha() {

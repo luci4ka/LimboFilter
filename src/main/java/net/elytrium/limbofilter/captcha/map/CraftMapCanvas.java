@@ -26,7 +26,8 @@ import net.elytrium.limboapi.api.protocol.packets.data.MapPalette;
 public class CraftMapCanvas {
 
   private final byte[][] canvas;
-  private final ThreadLocal<byte[]> buffer17 = ThreadLocal.withInitial(() -> new byte[MapData.MAP_SIZE]);
+  private final ThreadLocal<byte[]> buffer17 =
+      ThreadLocal.withInitial(() -> new byte[MapData.MAP_SIZE]);
   private final int width;
   private final int height;
 
@@ -44,7 +45,8 @@ public class CraftMapCanvas {
   }
 
   public void drawImage(BufferedImage image, int width, int height) {
-    this.drawImageCraft(MapPalette.imageToBytes(image, ProtocolVersion.MAXIMUM_VERSION), width, height);
+    this.drawImageCraft(
+        MapPalette.imageToBytes(image, ProtocolVersion.MAXIMUM_VERSION), width, height);
   }
 
   public void drawImage(int[] image, int width, int height) {
@@ -52,7 +54,8 @@ public class CraftMapCanvas {
       return;
     }
 
-    this.drawImageCraft(MapPalette.imageToBytes(image, ProtocolVersion.MAXIMUM_VERSION), width, height);
+    this.drawImageCraft(
+        MapPalette.imageToBytes(image, ProtocolVersion.MAXIMUM_VERSION), width, height);
   }
 
   public void drawImageCraft(byte[] craftBytes, int width, int height) {

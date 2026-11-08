@@ -47,18 +47,21 @@ public class CaptchaPainter {
 
   public CaptchaPainter(int width, int height) {
     if (Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_RIPPLE) {
-      RippleEffect.AxisConfig vertical = new RippleEffect.AxisConfig(
-          this.random.nextDouble() * 2 * Math.PI, (1 + this.random.nextDouble() * 2) * Math.PI,
-          height / Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_RIPPLE_AMPLITUDE_HEIGHT
-      );
-      RippleEffect.AxisConfig horizontal = new RippleEffect.AxisConfig(
-          this.random.nextDouble() * 2 * Math.PI, (2 + this.random.nextDouble() * 2) * Math.PI,
-          width / Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_RIPPLE_AMPLITUDE_WIDTH
-      );
+      RippleEffect.AxisConfig vertical =
+          new RippleEffect.AxisConfig(
+              this.random.nextDouble() * 2 * Math.PI,
+              (1 + this.random.nextDouble() * 2) * Math.PI,
+              height / Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_RIPPLE_AMPLITUDE_HEIGHT);
+      RippleEffect.AxisConfig horizontal =
+          new RippleEffect.AxisConfig(
+              this.random.nextDouble() * 2 * Math.PI,
+              (2 + this.random.nextDouble() * 2) * Math.PI,
+              width / Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_RIPPLE_AMPLITUDE_WIDTH);
       this.effects.add(new RippleEffect(vertical, horizontal, width, height));
     }
 
-    this.effects.add(new OutlineEffect(Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_OUTLINE_OVERRIDE_RADIUS));
+    this.effects.add(
+        new OutlineEffect(Settings.IMP.MAIN.CAPTCHA_GENERATOR.FONT_OUTLINE_OVERRIDE_RADIUS));
 
     int length = (int) this.effects.stream().filter(CaptchaEffect::shouldCopy).count();
     this.buffers = ThreadLocal.withInitial(() -> new byte[length + 1][width * height]);
@@ -66,9 +69,10 @@ public class CaptchaPainter {
     this.height = height;
 
     if (!Settings.IMP.MAIN.CAPTCHA_GENERATOR.CURVES_COLORS.isEmpty()) {
-      this.curveColor = Settings.IMP.MAIN.CAPTCHA_GENERATOR.CURVES_COLORS.stream()
-          .map(c -> new Color(Integer.parseInt(c, 16)))
-          .collect(Collectors.toUnmodifiableList());
+      this.curveColor =
+          Settings.IMP.MAIN.CAPTCHA_GENERATOR.CURVES_COLORS.stream()
+              .map(c -> new Color(Integer.parseInt(c, 16)))
+              .collect(Collectors.toUnmodifiableList());
       this.curveColorIterator = ThreadLocal.withInitial(this.curveColor::iterator);
     } else {
       this.curveColor = null;
@@ -117,7 +121,9 @@ public class CaptchaPainter {
   }
 
   private void drawText(byte[] image, RenderedFont font, byte[] colors, String text) {
-    boolean scaleFont = Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT;
+    boolean scaleFont =
+        Settings.IMP.MAIN.FRAMED_CAPTCHA.FRAMED_CAPTCHA_ENABLED
+            && Settings.IMP.MAIN.FRAMED_CAPTCHA.AUTOSCALE_FONT;
     int multiplierX = scaleFont ? Settings.IMP.MAIN.FRAMED_CAPTCHA.WIDTH : 1;
     int multiplierY = scaleFont ? Settings.IMP.MAIN.FRAMED_CAPTCHA.HEIGHT : 1;
 
@@ -145,7 +151,8 @@ public class CaptchaPainter {
             int localX = i + x;
             int localY = j + y;
             if (localX >= 0 && localY >= y && localX < this.width && localY < this.height) {
-              image[localY * this.width + localX] = colors[(localY * this.width + localX) % colors.length];
+              image[localY * this.width + localX] =
+                  colors[(localY * this.width + localX) % colors.length];
             }
           }
         }
@@ -168,19 +175,21 @@ public class CaptchaPainter {
       CubicCurve2D cubicCurve;
 
       if (this.random.nextBoolean()) {
-        cubicCurve = new CubicCurve2D.Double(
-            this.random.nextDouble() * this.width, this.random.nextDouble() * 0.1 * this.height,
-            this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
-            this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
-            this.random.nextDouble() * this.width, (0.8 + 0.1 * this.random.nextDouble()) * this.height
-        );
+        cubicCurve =
+            new CubicCurve2D.Double(
+                this.random.nextDouble() * this.width, this.random.nextDouble() * 0.1 * this.height,
+                this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
+                this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
+                this.random.nextDouble() * this.width,
+                    (0.8 + 0.1 * this.random.nextDouble()) * this.height);
       } else {
-        cubicCurve = new CubicCurve2D.Double(
-            this.random.nextDouble() * 0.1 * this.width, this.random.nextDouble() * this.height,
-            this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
-            this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
-            (0.8 + 0.1 * this.random.nextDouble()) * this.width, this.random.nextDouble() * this.height
-        );
+        cubicCurve =
+            new CubicCurve2D.Double(
+                this.random.nextDouble() * 0.1 * this.width, this.random.nextDouble() * this.height,
+                this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
+                this.random.nextDouble() * this.width, this.random.nextDouble() * this.height,
+                (0.8 + 0.1 * this.random.nextDouble()) * this.width,
+                    this.random.nextDouble() * this.height);
       }
 
       double[] coords = new double[6];
@@ -193,7 +202,8 @@ public class CaptchaPainter {
 
       while (!pathIterator.isDone()) {
         int currentSegment = pathIterator.currentSegment(coords);
-        if (currentSegment == PathIterator.SEG_MOVETO || currentSegment == PathIterator.SEG_LINETO) {
+        if (currentSegment == PathIterator.SEG_MOVETO
+            || currentSegment == PathIterator.SEG_LINETO) {
           Point2D.Double point = new Point2D.Double(coords[0], coords[1]);
           graphics.drawLine((int) prev.x, (int) prev.y, (int) point.x, (int) point.y);
           prev = point;

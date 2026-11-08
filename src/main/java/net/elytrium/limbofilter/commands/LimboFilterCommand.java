@@ -43,15 +43,17 @@ public class LimboFilterCommand implements SimpleCommand {
 
   private static final List<UUID> PLAYERS_WITH_STATS = new ArrayList<>();
 
-  private static final List<Component> HELP_MESSAGE = List.of(
-      Component.text("This server is using LimboFilter and LimboAPI.", NamedTextColor.YELLOW),
-      Component.text("(C) 2021 - 2023 Elytrium", NamedTextColor.YELLOW),
-      Component.text("https://elytrium.net/github/", NamedTextColor.GREEN),
-      Component.empty()
-  );
+  private static final List<Component> HELP_MESSAGE =
+      List.of(
+          Component.text("This server is using LimboFilter and LimboAPI.", NamedTextColor.YELLOW),
+          Component.text("(C) 2021 - 2023 Elytrium", NamedTextColor.YELLOW),
+          Component.text("https://elytrium.net/github/", NamedTextColor.GREEN),
+          Component.empty());
 
-  private static final Component AVAILABLE_SUBCOMMANDS_MESSAGE = Component.text("Available subcommands:", NamedTextColor.WHITE);
-  private static final Component NO_AVAILABLE_SUBCOMMANDS_MESSAGE = Component.text("There is no available subcommands for you.", NamedTextColor.WHITE);
+  private static final Component AVAILABLE_SUBCOMMANDS_MESSAGE =
+      Component.text("Available subcommands:", NamedTextColor.WHITE);
+  private static final Component NO_AVAILABLE_SUBCOMMANDS_MESSAGE =
+      Component.text("There is no available subcommands for you.", NamedTextColor.WHITE);
 
   private static ScheduledTask STATS_TASK;
 
@@ -66,13 +68,24 @@ public class LimboFilterCommand implements SimpleCommand {
 
     if (STATS_TASK == null) {
       ProxyServer server = this.plugin.getServer();
-      STATS_TASK = server.getScheduler().buildTask(
-          this.plugin,
-          () -> PLAYERS_WITH_STATS.stream()
-              .map(server::getPlayer)
-              .forEach(optionalPlayer -> optionalPlayer.ifPresent(
-                  player -> player.sendActionBar(this.createStatsComponent(player.getRemoteAddress().getAddress(), player.getPing()))))
-      ).repeat(1, TimeUnit.SECONDS).schedule();
+      STATS_TASK =
+          server
+              .getScheduler()
+              .buildTask(
+                  this.plugin,
+                  () ->
+                      PLAYERS_WITH_STATS.stream()
+                          .map(server::getPlayer)
+                          .forEach(
+                              optionalPlayer ->
+                                  optionalPlayer.ifPresent(
+                                      player ->
+                                          player.sendActionBar(
+                                              this.createStatsComponent(
+                                                  player.getRemoteAddress().getAddress(),
+                                                  player.getPing())))))
+              .repeat(1, TimeUnit.SECONDS)
+              .schedule();
     }
 
     Serializer serializer = LimboFilter.getSerializer();
@@ -128,16 +141,17 @@ public class LimboFilterCommand implements SimpleCommand {
 
   @Override
   public boolean hasPermission(Invocation invocation) {
-    return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.HELP
-        .hasPermission(invocation.source(), "limbofilter.commands.help");
+    return Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.HELP.hasPermission(
+        invocation.source(), "limbofilter.commands.help");
   }
 
   private void showHelp(CommandSource source) {
     HELP_MESSAGE.forEach(source::sendMessage);
 
-    List<Subcommand> availableSubcommands = Arrays.stream(Subcommand.values())
-        .filter(command -> command.hasPermission(source))
-        .collect(Collectors.toList());
+    List<Subcommand> availableSubcommands =
+        Arrays.stream(Subcommand.values())
+            .filter(command -> command.hasPermission(source))
+            .collect(Collectors.toList());
 
     if (availableSubcommands.size() > 0) {
       source.sendMessage(AVAILABLE_SUBCOMMANDS_MESSAGE);
@@ -149,19 +163,20 @@ public class LimboFilterCommand implements SimpleCommand {
 
   private Component createStatsComponent(InetAddress address, long ping) {
     Statistics statistics = this.plugin.getStatistics();
-    Component base = LimboFilter.getSerializer().deserialize(
-            MessageFormat.format(
+    Component base =
+        LimboFilter.getSerializer()
+            .deserialize(
+                MessageFormat.format(
                     Settings.IMP.MAIN.STRINGS.STATS_FORMAT,
                     statistics.getBlockedConnections(),
                     statistics.getConnections() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_CPS,
                     statistics.getPings() + "/" + Settings.IMP.MAIN.UNIT_OF_TIME_PPS,
                     statistics.getTotalConnection(),
                     ping,
-                    statistics.getPing(address)
-            )
-    );
+                    statistics.getPing(address)));
 
-    String extra = String.format(
+    String extra =
+        String.format(
             " &7| &cFalling: &6%d &cHover: &6%d &cRate: &6%d &cAccel: &6%d &cGround: &6%d &cSettings: &6%d &cBrand: &6%d &cCaptcha: &6%d &cProxy: &6%d",
             statistics.getFallingCheckFails(),
             statistics.getHoverCheckFails(),
@@ -171,20 +186,23 @@ public class LimboFilterCommand implements SimpleCommand {
             statistics.getClientSettingsFails(),
             statistics.getBrandFails(),
             statistics.getCaptchaFails(),
-            statistics.getProxyCheckFails()
-    );
+            statistics.getProxyCheckFails());
 
     Component extraComponent = LimboFilter.getSerializer().deserialize(extra);
     return Component.textOfChildren(base, extraComponent);
   }
 
   private enum Subcommand {
-    RELOAD("Reload config.", Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.RELOAD,
+    RELOAD(
+        "Reload config.",
+        Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.RELOAD,
         (LimboFilterCommand parent, CommandSource source, String[] args) -> {
           parent.plugin.reload();
           source.sendMessage(parent.reloadComponent);
         }),
-    STATS("Enable/Disable statistics of connections and blocked bots.", Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.STATS,
+    STATS(
+        "Enable/Disable statistics of connections and blocked bots.",
+        Settings.IMP.MAIN.COMMAND_PERMISSION_STATE.STATS,
         (LimboFilterCommand parent, CommandSource source, String[] args) -> {
           if (source instanceof Player) {
             Player player = (Player) source;
@@ -206,7 +224,8 @@ public class LimboFilterCommand implements SimpleCommand {
     private final CommandPermissionState permissionState;
     private final SubcommandExecutor executor;
 
-    Subcommand(String description, CommandPermissionState permissionState, SubcommandExecutor executor) {
+    Subcommand(
+        String description, CommandPermissionState permissionState, SubcommandExecutor executor) {
       this.permissionState = permissionState;
       this.command = this.name().toLowerCase(Locale.ROOT);
       this.description = description;
@@ -221,8 +240,7 @@ public class LimboFilterCommand implements SimpleCommand {
       return Component.textOfChildren(
           Component.text("  /limbofilter " + this.command, NamedTextColor.GREEN),
           Component.text(" - ", NamedTextColor.DARK_GRAY),
-          Component.text(this.description, NamedTextColor.YELLOW)
-      );
+          Component.text(this.description, NamedTextColor.YELLOW));
     }
 
     public String getCommand() {

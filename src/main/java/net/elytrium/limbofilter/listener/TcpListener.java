@@ -46,8 +46,7 @@ public class TcpListener {
 
   private final LimboFilter plugin;
   private final Map<InetAddress, TcpAwaitingPacket> tempPingTimestamp = new HashMap<>();
-  @MonotonicNonNull
-  private PcapHandle handle;
+  @MonotonicNonNull private PcapHandle handle;
 
   static {
     try {
@@ -62,68 +61,86 @@ public class TcpListener {
   }
 
   public void start() throws PcapException {
-    this.handle = Pcap.openLive(Settings.IMP.MAIN.TCP_LISTENER.INTERFACE_NAME, Settings.IMP.MAIN.TCP_LISTENER.SNAPLEN, 1,
-        Settings.IMP.MAIN.TCP_LISTENER.TIMEOUT
-    );
+    this.handle =
+        Pcap.openLive(
+            Settings.IMP.MAIN.TCP_LISTENER.INTERFACE_NAME,
+            Settings.IMP.MAIN.TCP_LISTENER.SNAPLEN,
+            1,
+            Settings.IMP.MAIN.TCP_LISTENER.TIMEOUT);
 
-    int port = ((VelocityConfiguration) this.plugin.getServer().getConfiguration()).getBind().getPort();
-    BpfProgram filter = this.handle.compile("tcp and (dst port " + port + " or src port " + port + ")", 1);
+    int port =
+        ((VelocityConfiguration) this.plugin.getServer().getConfiguration()).getBind().getPort();
+    BpfProgram filter =
+        this.handle.compile("tcp and (dst port " + port + " or src port " + port + ")", 1);
     this.handle.setFilter(filter);
     filter.free();
 
-    Set<InetAddress> localAddresses = Pcap.findAllDevs().stream()
-        .map(PcapDevice::getAddresses)
-        .flatMap(Collection::stream)
-        .map(PcapAddress::getAddress)
-        .filter(Objects::nonNull)
-        .map(InetSocketAddress::getAddress)
-        .collect(Collectors.toSet());
+    Set<InetAddress> localAddresses =
+        Pcap.findAllDevs().stream()
+            .map(PcapDevice::getAddresses)
+            .flatMap(Collection::stream)
+            .map(PcapAddress::getAddress)
+            .filter(Objects::nonNull)
+            .map(InetSocketAddress::getAddress)
+            .collect(Collectors.toSet());
 
     LinkType datalink = this.handle.datalink();
-    new Thread(() -> {
-      Thread.currentThread().setContextClassLoader(LimboFilter.class.getClassLoader());
-      long listenDelay = Settings.IMP.MAIN.TCP_LISTENER.LISTEN_DELAY;
+    new Thread(
+            () -> {
+              Thread.currentThread().setContextClassLoader(LimboFilter.class.getClassLoader());
+              long listenDelay = Settings.IMP.MAIN.TCP_LISTENER.LISTEN_DELAY;
 
-      try {
-        this.handle.loop(-1, (packetHeader, rawPacket) -> {
-          try {
-            Packet packet = new Packet();
-            packet.decode(rawPacket, datalink);
+              try {
+                this.handle.loop(
+                    -1,
+                    (packetHeader, rawPacket) -> {
+                      try {
+                        Packet packet = new Packet();
+                        packet.decode(rawPacket, datalink);
 
-            // Ethernet/LinuxSLL -> IP -> TCP
-            IP ipPacket = (IP) packet.getLayers().get(1);
-            TCP tcpPacket = (TCP) packet.getLayers().get(2);
+                        // Ethernet/LinuxSLL -> IP -> TCP
+                        IP ipPacket = (IP) packet.getLayers().get(1);
+                        TCP tcpPacket = (TCP) packet.getLayers().get(2);
 
-            if (localAddresses.contains(ipPacket.getSrcAddress()) && tcpPacket.isPsh() && tcpPacket.isAck()) {
-              TcpAwaitingPacket previousPacket = this.tempPingTimestamp.get(ipPacket.getDstAddress());
-              if (previousPacket != null) {
-                long currentTime = System.currentTimeMillis();
-                if (previousPacket.time + listenDelay <= currentTime) {
-                  previousPacket.seq = tcpPacket.getAckSn();
-                  previousPacket.time = currentTime;
+                        if (localAddresses.contains(ipPacket.getSrcAddress())
+                            && tcpPacket.isPsh()
+                            && tcpPacket.isAck()) {
+                          TcpAwaitingPacket previousPacket =
+                              this.tempPingTimestamp.get(ipPacket.getDstAddress());
+                          if (previousPacket != null) {
+                            long currentTime = System.currentTimeMillis();
+                            if (previousPacket.time + listenDelay <= currentTime) {
+                              previousPacket.seq = tcpPacket.getAckSn();
+                              previousPacket.time = currentTime;
+                            }
+                          }
+                        }
+
+                        if (localAddresses.contains(ipPacket.getDstAddress())
+                            && tcpPacket.isAck()) {
+                          TcpAwaitingPacket awaitingPacket =
+                              this.tempPingTimestamp.get(ipPacket.getSrcAddress());
+                          if (awaitingPacket != null
+                              && awaitingPacket.seq == tcpPacket.getSequence()) {
+                            int pingDiff = (int) (System.currentTimeMillis() - awaitingPacket.time);
+                            if (pingDiff > 2) {
+                              this.plugin
+                                  .getStatistics()
+                                  .updatePing(ipPacket.getSrcAddress(), pingDiff);
+                            }
+                          }
+                        }
+                      } catch (LayerDecodeException e) {
+                        throw new IllegalStateException(e);
+                      }
+                    });
+              } catch (PcapException e) {
+                if (e.getError() != PcapError.ERROR_BREAK) {
+                  throw new IllegalStateException(e);
                 }
               }
-            }
-
-            if (localAddresses.contains(ipPacket.getDstAddress()) && tcpPacket.isAck()) {
-              TcpAwaitingPacket awaitingPacket = this.tempPingTimestamp.get(ipPacket.getSrcAddress());
-              if (awaitingPacket != null && awaitingPacket.seq == tcpPacket.getSequence()) {
-                int pingDiff = (int) (System.currentTimeMillis() - awaitingPacket.time);
-                if (pingDiff > 2) {
-                  this.plugin.getStatistics().updatePing(ipPacket.getSrcAddress(), pingDiff);
-                }
-              }
-            }
-          } catch (LayerDecodeException e) {
-            throw new IllegalStateException(e);
-          }
-        });
-      } catch (PcapException e) {
-        if (e.getError() != PcapError.ERROR_BREAK) {
-          throw new IllegalStateException(e);
-        }
-      }
-    }).start();
+            })
+        .start();
   }
 
   public void registerAddress(InetAddress address) {

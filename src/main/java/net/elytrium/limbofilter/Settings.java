@@ -113,18 +113,18 @@ public class Settings extends YamlConfig {
     public int NON_VALID_POSITION_Y_ATTEMPTS = 10;
 
     @Comment("Maximum allowed difference between actual and vanilla falling speed. Lower = stricter.")
-    public double MAX_VALID_POSITION_DIFFERENCE = 0.001;
+    public double MAX_VALID_POSITION_DIFFERENCE = 0.01;
 
-    // ---- Новые проверки (Sonar-style) ----
+    // ---- Новые проверки (Sonar-style, включены с разумными порогами) ----
 
-    @Comment("Max ticks a player can stay in air without falling before being kicked (Hover check).")
-    public int MAX_HOVER_TICKS = 10;
+    @Comment("Max ticks a player can stay in air without falling before being kicked (Hover check). 20 ticks = 1 second.")
+    public int MAX_HOVER_TICKS = 20;
 
-    @Comment("Minimum allowed interval between movement packets in ms. Lower = stricter.")
-    public int MIN_MOVE_INTERVAL_MS = 15;
+    @Comment("Minimum allowed interval between movement packets in ms. Lower = stricter. Set 0 to disable.")
+    public int MIN_MOVE_INTERVAL_MS = 30;
 
-    @Comment("Max consecutive fast movement packets before kick.")
-    public int MAX_FAST_MOVES = 10;
+    @Comment("Max consecutive fast movement packets before kick. Set 9999 to disable.")
+    public int MAX_FAST_MOVES = 15;
 
     // ---- Очередь ----
 
@@ -152,13 +152,13 @@ public class Settings extends YamlConfig {
     public BotFilterSessionHandler.CheckState CHECK_STATE = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
 
     @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+    public BotFilterSessionHandler.CheckState CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
 
     @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
 
     @Comment("See \"filter-auto-toggle.check-state-toggle\".")
-    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.ONLY_CAPTCHA;
+    public BotFilterSessionHandler.CheckState GEYSER_CHECK_STATE_NON_TOGGLED = BotFilterSessionHandler.CheckState.CAPTCHA_ON_POSITION_FAILED;
 
     // ---- Мир ----
 
@@ -448,7 +448,7 @@ public class Settings extends YamlConfig {
       }
     }
 
-    // ---- TCP Listener ----
+    // ---- TCP Listener (proxy check отключён) ----
 
     @Create
     public MAIN.TCP_LISTENER TCP_LISTENER;
